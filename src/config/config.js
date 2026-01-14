@@ -44,7 +44,7 @@ export const config = convict({
   serviceName: {
     doc: 'Applications Service Name',
     format: String,
-    default: 'apha-apps-perms-case-mgmt-ui'
+    default: 'Case Management Service'
   },
   root: {
     doc: 'Project root',

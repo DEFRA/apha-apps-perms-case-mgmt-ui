@@ -60,7 +60,7 @@ describe('context and cache', () => {
               href: '/about'
             }
           ],
-          serviceName: 'apha-apps-perms-case-mgmt-ui',
+          serviceName: 'Case Management Service',
           serviceUrl: '/'
         })
       })
@@ -149,7 +149,7 @@ describe('context and cache', () => {
               href: '/about'
             }
           ],
-          serviceName: 'apha-apps-perms-case-mgmt-ui',
+          serviceName: 'Case Management Service',
           serviceUrl: '/'
         })
       })
