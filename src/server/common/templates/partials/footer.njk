@@ -1,0 +1,35 @@
+<div class="govuk-width-container">
+  <p class="govuk-body govuk-body-s" data-testid="help-footer-text">
+    If you need help with the service you can call 03000 200 301.
+  </p>
+</div>
+{{
+  govukFooter({
+    rebrand: true,
+    meta: {
+      items: [
+        {
+          href: "https://www.gov.uk/help/privacy-notice",
+          text: "Privacy",
+          attributes: {
+            'data-testid': 'privacy-policy-link'
+          }
+        },
+        {
+          href: "https://www.gov.uk/help/cookies",
+          text: "Cookies",
+          attributes: {
+            'data-testid': 'cookies-link'
+          }
+        },
+        {
+          href: "https://www.gov.uk/help/accessibility-statement",
+          text: "Accessibility statement",
+          attributes: {
+            'data-testid': 'accessibility-statement-link'
+          }
+        }
+      ]
+    }
+  })
+}}

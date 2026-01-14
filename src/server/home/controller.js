@@ -1,12 +1,11 @@
 /**
- * A GDS styled example home page controller.
- * Provided as an example, remove or modify as required.
+ * Service home page controller.
  */
 export const homeController = {
   handler(_request, h) {
     return h.view('home/index', {
-      pageTitle: 'Home',
-      heading: 'Home'
+      pageTitle: 'Case Management Tool',
+      heading: 'Case Management Tool'
     })
   }
 }

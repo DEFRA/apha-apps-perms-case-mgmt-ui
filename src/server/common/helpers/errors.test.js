@@ -23,7 +23,7 @@ describe('#errors', () => {
     })
 
     expect(result).toEqual(
-      expect.stringContaining('Page not found | apha-apps-perms-case-mgmt-ui')
+      expect.stringContaining('Page not found | Case Management Tool')
     )
     expect(statusCode).toBe(statusCodes.notFound)
   })
