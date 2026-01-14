@@ -4,28 +4,37 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_apha-apps-perms-case-mgmt-ui&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DEFRA_apha-apps-perms-case-mgmt-ui)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_apha-apps-perms-case-mgmt-ui&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DEFRA_apha-apps-perms-case-mgmt-ui)
 
-Core delivery platform Node.js Frontend Template.
+FrontEnd for a Case Management tool that will be used by flexible teams (including admins and vets) to view the details of customer applications and their corresponding cases
+and process them by following series of pre-defined steps in order to reach a determination. Users of this tool will have the option to assign the cases to themselves
+or to someone else (if their role allows that) and a case could also be escalated to a specialist for review when required. Additional information could also be requested
+to the applicant and added to the case.
 
-- [Requirements](#requirements)
-  - [Node.js](#nodejs)
-- [Server-side Caching](#server-side-caching)
-- [Redis](#redis)
-- [Local Development](#local-development)
-  - [Setup](#setup)
-  - [Development](#development)
-  - [Production](#production)
-  - [Npm scripts](#npm-scripts)
-  - [Update dependencies](#update-dependencies)
-  - [Formatting](#formatting)
-    - [Windows prettier issue](#windows-prettier-issue)
-- [Docker](#docker)
-  - [Development image](#development-image)
-  - [Production image](#production-image)
-  - [Docker Compose](#docker-compose)
-  - [Dependabot](#dependabot)
-  - [SonarCloud](#sonarcloud)
-- [Licence](#licence)
-  - [About the licence](#about-the-licence)
+The cases will be retrieved and updated through a set of APIs decoupling this tool from the underlying storage solution.
+
+This tool will be protected by Azure AD to prevent unauthorised access.
+
+- [apha-apps-perms-case-mgmt-ui](#apha-apps-perms-case-mgmt-ui)
+  - [Requirements](#requirements)
+    - [Node.js](#nodejs)
+  - [Server-side Caching](#server-side-caching)
+  - [Redis](#redis)
+  - [Proxy](#proxy)
+  - [Local Development](#local-development)
+    - [Setup](#setup)
+    - [Development](#development)
+    - [Production](#production)
+    - [Npm scripts](#npm-scripts)
+    - [Update dependencies](#update-dependencies)
+    - [Formatting](#formatting)
+      - [Windows prettier issue](#windows-prettier-issue)
+  - [Docker](#docker)
+    - [Development image](#development-image)
+    - [Production image](#production-image)
+    - [Docker Compose](#docker-compose)
+    - [Dependabot](#dependabot)
+    - [SonarCloud](#sonarcloud)
+  - [Licence](#licence)
+    - [About the licence](#about-the-licence)
 
 ## Requirements
 
