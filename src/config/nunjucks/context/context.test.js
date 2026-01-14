@@ -60,7 +60,7 @@ describe('context and cache', () => {
               href: '/about'
             }
           ],
-          serviceName: 'Case Management Service',
+          serviceName: 'Case Management Tool',
           serviceUrl: '/'
         })
       })
@@ -149,7 +149,7 @@ describe('context and cache', () => {
               href: '/about'
             }
           ],
-          serviceName: 'Case Management Service',
+          serviceName: 'Case Management Tool',
           serviceUrl: '/'
         })
       })

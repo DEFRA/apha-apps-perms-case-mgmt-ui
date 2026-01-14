@@ -44,7 +44,7 @@ export const config = convict({
   serviceName: {
     doc: 'Applications Service Name',
     format: String,
-    default: 'Case Management Service'
+    default: 'Case Management Tool'
   },
   root: {
     doc: 'Project root',

@@ -23,7 +23,7 @@ describe('#errors', () => {
     })
 
     expect(result).toEqual(
-      expect.stringContaining('Page not found | Case Management Service')
+      expect.stringContaining('Page not found | Case Management Tool')
     )
     expect(statusCode).toBe(statusCodes.notFound)
   })
