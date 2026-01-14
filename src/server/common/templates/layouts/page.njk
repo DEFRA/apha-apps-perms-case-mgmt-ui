@@ -27,11 +27,7 @@
   }}
 {% endblock %}
 {% block pageTitle %}
-  {% if evaluate %}
-    {{ pageTitle | evaluate }} | {{ serviceName }}
-  {% else %}
-    {{ pageTitle }} | {{ serviceName }}
-  {% endif %}
+   {{ pageTitle }} | {{ serviceName }}
 {% endblock %}
 {% block beforeContent %}
   {% if features.prototypeMode %}
