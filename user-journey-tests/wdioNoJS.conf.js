@@ -10,7 +10,14 @@ export const config = merge(wdioConf, {
       browserVersion: 'stable',
       'goog:chromeOptions': {
         prefs: { 'profile.managed_default_content_settings.javascript': 2 },
-        args: ['headless', 'disable-gpu']
+        args: [
+          '--headless',
+          '--disable-gpu',
+          '--no-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-software-rasterizer',
+          '--disable-extensions'
+        ]
       }
     }
   ]
