@@ -27,28 +27,9 @@
   }}
 {% endblock %}
 {% block pageTitle %}
-   {{ pageTitle }} | {{ serviceName }}
+  {{ pageTitle }}
 {% endblock %}
 {% block beforeContent %}
-  {% if features.prototypeMode %}
-    {{
-      govukPhaseBanner({
-        tag: {
-          text: 'Prototype'
-        },
-        html: 'This is a service prototype.'
-      })
-    }}
-  {% else %}
-    {{
-      govukPhaseBanner({
-        tag: {
-          text: 'Beta'
-        },
-        html: 'This is a new service. Help us improve it and <a data-testid="feedback-link" target="_blank" class="govuk-link" href="https://defragroup.eu.qualtrics.com/jfe/form/SV_7ZDFNwIA2wLF9lk">give your feedback (opens in new tab)</a>.'
-      })
-    }}
-  {% endif %}
 {% endblock %}
 {% block content %}
 {% endblock %}

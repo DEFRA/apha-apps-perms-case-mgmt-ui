@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     clearMocks: true,
+    exclude: [...configDefaults.exclude, 'user-journey-tests/**'],
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
