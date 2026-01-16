@@ -133,6 +133,30 @@ describe('federated-oidc scheme', () => {
     )
   })
 
+  test('returns unauthorized when pre-login fails', async () => {
+    buildAuthorizationUrl.mockImplementationOnce(() => {
+      throw new Error('prelogin fail')
+    })
+    const server = mockServer()
+    await federatedOidc.register(server)
+
+    const schemeFn = server.auth.scheme.mock.calls[0][1]
+    const strategyOptions = server.auth.strategy.mock.calls[0][2]
+    const { authenticate } = schemeFn(server, strategyOptions)
+
+    const h = {
+      redirect: vi.fn(() => ({ takeover: () => 'taken' }))
+    }
+
+    const result = await authenticate(
+      { yar: { flash: vi.fn(), set: vi.fn() }, query: {} },
+      h
+    )
+
+    expect(result.isBoom).toBe(true)
+    expect(result.output.statusCode).toBe(401)
+  })
+
   test('refreshToken calls discovery and refreshTokenGrant with provided options', async () => {
     const options = {
       discoveryUri: 'https://login.example/.well-known/openid-configuration',
@@ -187,5 +211,27 @@ describe('federated-oidc scheme', () => {
       nonce: 'nonce'
     })
     expect(flash).toHaveBeenCalledWith(referrerFlashKey, '/')
+  })
+
+  test('post-login returns unauthorized when token exchange fails', async () => {
+    authorizationCodeGrant.mockRejectedValueOnce(new Error('no token'))
+    const server = mockServer()
+    await federatedOidc.register(server)
+
+    const schemeFn = server.auth.scheme.mock.calls[0][1]
+    const strategyOptions = server.auth.strategy.mock.calls[0][2]
+    const { authenticate } = schemeFn(server, strategyOptions)
+
+    const h = { authenticated: vi.fn() }
+    const request = {
+      yar: { get: vi.fn().mockReturnValue({ codeVerifier: 'v', nonce: 'n' }) },
+      query: { code: 'abc' },
+      url: 'http://localhost/auth/callback?code=abc'
+    }
+
+    const result = await authenticate(request, h)
+
+    expect(result.isBoom).toBe(true)
+    expect(result.output.statusCode).toBe(401)
   })
 })

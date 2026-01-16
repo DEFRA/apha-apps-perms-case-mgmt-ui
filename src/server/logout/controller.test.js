@@ -30,4 +30,18 @@ describe('logoutController', () => {
     )
     expect(result).toBe('redirected')
   })
+
+  test('redirects home when no session exists', async () => {
+    const redirect = vi.fn().mockReturnValue('redirected')
+    const h = { redirect }
+    const request = {
+      auth: { credentials: null },
+      info: { referrer: null }
+    }
+
+    const result = await logoutController.handler(request, h)
+
+    expect(redirect).toHaveBeenCalledWith('/')
+    expect(result).toBe('redirected')
+  })
 })
