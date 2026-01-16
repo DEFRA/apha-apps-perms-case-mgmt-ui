@@ -159,6 +159,7 @@ async function postLogin(request, oidcConfig, options) {
   const claims = token.claims()
   return {
     expiresIn,
+    token: token.access_token,
     accessToken: token.access_token,
     refreshToken: token.refresh_token,
     idToken: token.id_token,
