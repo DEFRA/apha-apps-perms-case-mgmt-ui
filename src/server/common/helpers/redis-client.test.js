@@ -26,7 +26,8 @@ describe('#buildRedisClient', () => {
         db: 0,
         host: '127.0.0.1',
         keyPrefix: 'apha-apps-perms-case-mgmt-ui:',
-        port: 6379
+        port: 6379,
+        enableReadyCheck: false
       })
     })
   })
@@ -48,7 +49,13 @@ describe('#buildRedisClient', () => {
         {
           dnsLookup: expect.any(Function),
           keyPrefix: 'apha-apps-perms-case-mgmt-ui:',
-          redisOptions: { db: 0, password: 'pass', tls: {}, username: 'user' },
+          redisOptions: {
+            db: 0,
+            password: 'pass',
+            tls: {},
+            username: 'user',
+            enableReadyCheck: false
+          },
           slotsRefreshTimeout: 10000
         }
       )
