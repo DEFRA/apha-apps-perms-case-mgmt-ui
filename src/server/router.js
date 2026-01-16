@@ -7,6 +7,8 @@ import { serveStaticFiles } from './common/helpers/serve-static-files.js'
 import { auth } from './auth/index.js'
 import { login } from './login/index.js'
 import { logout } from './logout/index.js'
+import { forceHttpError } from './force-http-error/index.js'
+import { forceErrorLog } from './force-error-log/index.js'
 
 export const router = {
   plugin: {
@@ -21,7 +23,7 @@ export const router = {
       await server.register([auth, login, logout])
 
       // Application specific routes, add your own routes here
-      await server.register([home, about])
+      await server.register([home, about, forceHttpError, forceErrorLog])
 
       // Static assets
       await server.register([serveStaticFiles])
