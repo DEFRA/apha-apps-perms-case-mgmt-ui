@@ -85,7 +85,11 @@ describe('user-session', () => {
     const refreshTokenResponse = {
       access_token: jwtToken,
       refresh_token: 'new-refresh',
-      expires_in: 3600
+      expires_in: 3600,
+      token_type: 'Bearer',
+      scope: 'user.read',
+      ext_expires_in: '0',
+      id_token: 'id-token'
     }
 
     const session = await refreshUserSession(request, refreshTokenResponse)

@@ -15,7 +15,11 @@ describe('session-cookie validate', () => {
 
     const strategySpy = vi.spyOn(server.auth, 'strategy')
     await sessionCookie.plugin.register(server)
-    validateFn = strategySpy.mock.calls[0][2].validate
+    const strategyCall = strategySpy.mock.calls[0]
+    validateFn = strategyCall?.[2]?.validate
+    if (!validateFn) {
+      throw new Error('session validate function not registered')
+    }
   })
 
   test('returns isValid false when there is no session', async () => {

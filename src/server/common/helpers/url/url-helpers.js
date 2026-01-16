@@ -31,7 +31,3 @@ export const redirectWithRefresh = (h, redirect) => {
     )
     .takeover()
 }
-
-/**
- * @import { URL } from 'node:url'
- */

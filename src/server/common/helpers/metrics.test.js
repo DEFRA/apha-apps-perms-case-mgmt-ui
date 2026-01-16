@@ -9,7 +9,8 @@ const mockPutMetric = vi.fn()
 const mockFlush = vi.fn()
 const mockLoggerError = vi.fn()
 
-vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
+vi.mock('aws-embedded-metrics', async (importOriginal) => {
+  /** @type {any} */
   const original = await importOriginal()
 
   return {

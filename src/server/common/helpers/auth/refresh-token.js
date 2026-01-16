@@ -5,10 +5,10 @@ import { isPast, parseISO } from 'date-fns'
  * To be used as a server ext method to check if a token has expired and attempt to use the refresh token to get a
  * new one.
  * Requires a refreshToken function as the first param to provide a new token.
- * @param {Function} refreshToken
- * @param {{}} request
- * @param {{}} userSession
- * @returns {Promise<*>}
+ * @param {(token: string | undefined) => Promise<*> | *} refreshToken
+ * @param {any} request
+ * @param {{ expiresAt?: string, displayName?: string, refreshToken?: string } | null} userSession
+ * @returns {Promise<any>}
  */
 export async function refreshTokenIfExpired(
   refreshToken,

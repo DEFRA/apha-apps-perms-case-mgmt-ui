@@ -18,6 +18,7 @@ export const federatedOidc = {
   register: function (server) {
     const useMocks = config.get('azureFederatedCredentials.enableMocking')
     // noinspection JSDeprecatedSymbols
+    /** @type {{ discoveryUri: string, redirectUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, useMocks: boolean, execute: Array<(config?: any) => void> }} */
     const options = {
       discoveryUri: config.get('oidcWellKnownConfigurationUrl'),
       redirectUri: config.get('appBaseUrl') + callbackPath,
@@ -27,11 +28,17 @@ export const federatedOidc = {
       useMocks,
       // Disable the HTTPS requirements when connecting to the mock.
       // OpenId flags this as deprecated purely to warn that it's not for prod use.
-      ...(useMocks ? { execute: [openid.allowInsecureRequests] } : {}) // NOSONAR keep for local mock http support
+      execute: useMocks
+        ? [() => openid.allowInsecureRequests(/** @type {any} */ ({}))]
+        : [] // NOSONAR keep for local mock http support
     }
 
     server.auth.scheme('federated-oidc', scheme)
-    server.auth.strategy('azure-oidc', 'federated-oidc', options)
+    server.auth.strategy(
+      'azure-oidc',
+      'federated-oidc',
+      /** @type {any} */ (options)
+    )
 
     server.decorate('request', 'refreshToken', async function (userSession) {
       return refreshTokenIfExpired(
@@ -77,12 +84,12 @@ function scheme(_server, options) {
       } else {
         // User has logged in and been redirected back to the auth callback
         try {
-          const credentials = await postLogin(
-            request,
-            oidcConfig,
-            validatedOptions
-          )
-          return h.authenticated({ credentials })
+      const credentials = await postLogin(
+        request,
+        oidcConfig,
+        validatedOptions
+      )
+      return h.authenticated({ credentials })
         } catch (e) {
           logger.error(e, 'Post Federated login failed')
           return Boom.unauthorized(e)
@@ -147,16 +154,20 @@ async function postLogin(request, oidcConfig, options) {
   const currentUrl = asExternalUrl(request.url, config.get('appBaseUrl'))
 
   logger.info('validating token')
-  const token = await openid.authorizationCodeGrant(oidcConfig, currentUrl, {
-    pkceCodeVerifier: codeVerifier,
-    expectedNonce: nonce,
-    idTokenExpected: true
-  })
+  const token = await openid.authorizationCodeGrant(
+    oidcConfig,
+    currentUrl,
+    {
+      pkceCodeVerifier: codeVerifier,
+      expectedNonce: nonce,
+      idTokenExpected: true
+    }
+  )
 
   Hoek.assert(token, 'Failed to validate token')
 
   const expiresIn = token.expiresIn()
-  const claims = token.claims()
+  const claims = /** @type {any} */ (token.claims?.() ?? {})
   return {
     expiresIn,
     token: token.access_token,
@@ -165,9 +176,9 @@ async function postLogin(request, oidcConfig, options) {
     idToken: token.id_token,
     claims,
     profile: {
-      id: claims.oid,
-      displayName: claims.name,
-      email: claims.email ?? claims.preferred_username,
+      id: claims.oid ?? '',
+      displayName: claims.name ?? '',
+      email: claims.email ?? claims.preferred_username ?? '',
       loginHint: claims.login_hint
     }
   }
@@ -178,6 +189,10 @@ async function postLogin(request, oidcConfig, options) {
  * @param {{discoveryUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, execute: [() => void]}} options
  * @param {string} jwtRefreshToken
  * @returns {Promise<{}>}
+ */
+/**
+ * @param {{ discoveryUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, execute: Array<(config?: any) => void> }} options
+ * @param {string | undefined} jwtRefreshToken
  */
 export async function refreshToken(options, jwtRefreshToken) {
   const discoveryUrl = new URL(options.discoveryUri)
@@ -191,7 +206,7 @@ export async function refreshToken(options, jwtRefreshToken) {
     options.execute ? { execute: options.execute } : {}
   )
 
-  return openid.refreshTokenGrant(oidcConfig, jwtRefreshToken, {
+  return openid.refreshTokenGrant(oidcConfig, jwtRefreshToken ?? '', {
     scope: options.scope
   })
 }
@@ -204,7 +219,7 @@ const optionsSchema = Joi.object({
   scope: Joi.string().required(),
   tokenProvider: Joi.function().required(),
   useMocks: Joi.boolean().default(false),
-  execute: Joi.array().optional()
+  execute: Joi.array().default([])
 })
 
 /**
@@ -213,7 +228,6 @@ const optionsSchema = Joi.object({
  * the `client_secret` field.
  * @param {string} assertion
  * @returns ClientAuth
- * @class ClientFederatedCredential
  */
 function clientFederatedCredential(assertion) {
   return (_as, client, body) => {

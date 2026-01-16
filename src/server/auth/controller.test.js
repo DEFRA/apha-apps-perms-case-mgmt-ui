@@ -2,21 +2,23 @@ import { describe, expect, test, vi } from 'vitest'
 
 import { authCallbackController } from './controller.js'
 
+const { createUserSession, redirectWithRefresh } = vi.hoisted(() => ({
+  createUserSession: vi.fn(),
+  redirectWithRefresh: vi.fn((_h, redirect) => ({
+    redirectedTo: redirect
+  }))
+}))
+
 vi.mock('node:crypto', () => ({
   randomUUID: () => 'session-123'
 }))
 
-const createUserSession = vi.fn()
-const redirectWithRefresh = vi.fn((_h, redirect) => ({
-  redirectedTo: redirect
-}))
-
 vi.mock('../common/helpers/auth/user-session.js', () => ({
-  createUserSession: (...args) => createUserSession(...args)
+  createUserSession
 }))
 
 vi.mock('../common/helpers/url/url-helpers.js', () => ({
-  redirectWithRefresh: (...args) => redirectWithRefresh(...args)
+  redirectWithRefresh
 }))
 
 describe('authCallbackController', () => {

@@ -9,6 +9,7 @@ import { createLogger } from '../logging/logger.js'
 const logger = createLogger()
 
 export class CognitoFederatedCredentialProvider {
+  /** @type {string | null} */
   token = null
   logins = {
     [config.get('azureFederatedCredentials.providerName')]:
@@ -39,7 +40,7 @@ export class CognitoFederatedCredentialProvider {
   async getToken() {
     if (!this.token || tokenHasExpired(this.token)) {
       logger.info('Refreshing cognito token')
-      this.token = await this.requestCognitoToken()
+      this.token = (await this.requestCognitoToken()) ?? null
     }
     return this.token
   }

@@ -69,7 +69,15 @@ export default {
           browserslistEnv: 'javascripts',
           cacheDirectory: true,
           extends: path.join(dirname, 'babel.config.cjs'),
-          presets: [['@babel/preset-env']]
+          presets: [
+            [
+              '@babel/preset-env',
+              {
+                // Skip CommonJS modules transform
+                modules: false
+              }
+            ]
+          ]
         },
 
         // Flag loaded modules as side effect free

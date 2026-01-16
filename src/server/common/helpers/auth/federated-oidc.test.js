@@ -138,7 +138,8 @@ describe('federated-oidc scheme', () => {
       discoveryUri: 'https://login.example/.well-known/openid-configuration',
       clientId: 'client-id',
       scope: 'api://client-id/cdp.user',
-      tokenProvider: vi.fn().mockResolvedValue('federated-token')
+      tokenProvider: vi.fn().mockResolvedValue('federated-token'),
+      execute: [vi.fn()]
     }
 
     const result = await refreshToken(options, 'refresh-token')

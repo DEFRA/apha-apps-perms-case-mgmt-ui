@@ -2,8 +2,21 @@ import jwt from '@hapi/jwt'
 import { addSeconds } from 'date-fns'
 
 /**
+ * @typedef {object} UserSession
+ * @property {string} id
+ * @property {string} email
+ * @property {string} displayName
+ * @property {string} [loginHint]
+ * @property {boolean} isAuthenticated
+ * @property {string} token
+ * @property {string} refreshToken
+ * @property {number} expiresIn
+ * @property {string} expiresAt
+ */
+
+/**
  * Remove authenticated user from the portal
- * @param {import("@hapi/hapi").Request} request
+ * @param {any} request
  */
 function removeAuthenticatedUser(request) {
   request.dropUserSession()
@@ -16,7 +29,7 @@ function removeAuthenticatedUser(request) {
 
 /**
  * Create user session
- * @param {import("@hapi/hapi").Request} request
+ * @param {any} request
  * @param {string} sessionId
  * @returns {Promise<UserSession>}
  */
@@ -65,9 +78,9 @@ async function createUserSession(request, sessionId) {
 
 /**
  * Refresh user session
- * @param {import("@hapi/hapi").Request} request
+ * @param {any} request
  * @param {RefreshTokenResponse} refreshTokenResponse
- * @returns {Promise<void | UserSession>}
+ * @returns {Promise<void | any>}
  */
 async function refreshUserSession(request, refreshTokenResponse) {
   request.logger.debug('User session refreshing')
@@ -106,6 +119,3 @@ async function refreshUserSession(request, refreshTokenResponse) {
 }
 
 export { createUserSession, refreshUserSession, removeAuthenticatedUser }
-/**
- * @import { UserSession } from './get-user-session.js'
- */
