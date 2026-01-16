@@ -157,7 +157,7 @@ export const config = convict({
       doc: 'OIDC .well-known configuration URL. Defaults to the stub',
       format: String,
       env: 'OIDC_WELL_KNOWN_CONFIGURATION_URL',
-      default: `http://cdp.127.0.0.1.sslip.io:3939/${this.azureTenantId.default}/v2.0/.well-known/openid-configuration`
+      default: `http://localhost:3939/${this.azureTenantId.default}/v2.0/.well-known/openid-configuration`
     }
   },
   isSecureContextEnabled: {
