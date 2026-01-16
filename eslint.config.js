@@ -2,6 +2,7 @@ import neostandard from 'neostandard'
 import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 import jsdoc from 'eslint-plugin-jsdoc'
+import * as wdioPlugin from 'eslint-plugin-wdio'
 
 const neostandardConfig = neostandard({
   ignores: [
@@ -100,6 +101,31 @@ export default [
         Event: 'readonly',
         CustomEvent: 'readonly'
       }
+    }
+  },
+  {
+    files: ['user-journey-tests/**/*.{js,cjs}'],
+    plugins: {
+      wdio: wdioPlugin
+    },
+    languageOptions: {
+      globals: {
+        $: 'readonly',
+        $$: 'readonly',
+        browser: 'readonly',
+        driver: 'readonly',
+        expect: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        before: 'readonly',
+        after: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly'
+      }
+    },
+    rules: {
+      ...wdioPlugin.configs.recommended.rules,
+      'no-console': 'error'
     }
   },
   prettier

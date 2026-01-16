@@ -13,6 +13,14 @@
     "strictNullChecks": true,
     "types": ["vitest/globals"]
   },
-  "exclude": [".cache", ".public", ".server", "coverage", "node_modules"],
+  "exclude": [
+    ".cache",
+    ".public",
+    ".server",
+    ".vite",
+    "coverage",
+    "node_modules",
+    "user-journey-tests"
+  ],
   "include": ["**/*.cjs", "**/*.js", ".eslintrc.*", ".prettierrc.*"]
 }
