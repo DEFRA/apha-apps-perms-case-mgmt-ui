@@ -3,6 +3,7 @@
 .vscode
 .idea
 .public
+.server
 node_modules
 npm-debug.log
 coverage
@@ -10,3 +11,4 @@ coverage
 .envrc
 tsconfig.tsbuildinfo
 .env
+logs

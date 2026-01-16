@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "module": "NodeNext",
+    "noEmit": true,
+    "paths": {
+      "~/*": ["./*"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "types": ["vitest/globals"]
+  },
+  "exclude": [
+    ".cache",
+    ".public",
+    ".server",
+    ".vite",
+    "coverage",
+    "node_modules",
+    "user-journey-tests"
+  ],
+  "include": ["**/*.cjs", "**/*.js", ".eslintrc.*", ".prettierrc.*"]
+}
