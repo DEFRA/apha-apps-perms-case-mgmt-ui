@@ -33,7 +33,7 @@ async function fetchWellknown() {
     )
   }
 
-  return await response.json()
+  return response.json()
 }
 
 export { fetchWellknown }

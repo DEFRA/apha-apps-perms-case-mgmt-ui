@@ -27,14 +27,14 @@ export const federatedOidc = {
       useMocks,
       // Disable the HTTPS requirements when connecting to the mock.
       // OpenId flags this as deprecated purely to warn that it's not for prod use.
-      ...(useMocks ? { execute: [openid.allowInsecureRequests] } : {})
+      ...(useMocks ? { execute: [openid.allowInsecureRequests] } : {}) // NOSONAR keep for local mock http support
     }
 
     server.auth.scheme('federated-oidc', scheme)
     server.auth.strategy('azure-oidc', 'federated-oidc', options)
 
     server.decorate('request', 'refreshToken', async function (userSession) {
-      return await refreshTokenIfExpired(
+      return refreshTokenIfExpired(
         (token) => refreshToken(options, token),
         this,
         userSession
@@ -55,7 +55,7 @@ function scheme(_server, options) {
         discoveryUrl,
         validatedOptions.clientId,
         {},
-        ClientFederatedCredential(federatedToken),
+        clientFederatedCredential(federatedToken),
         options.execute ? { execute: options.execute } : {}
       )
 
@@ -187,7 +187,7 @@ export async function refreshToken(options, jwtRefreshToken) {
     discoveryUrl,
     options.clientId,
     {},
-    ClientFederatedCredential(federatedToken),
+    clientFederatedCredential(federatedToken),
     options.execute ? { execute: options.execute } : {}
   )
 
@@ -215,7 +215,7 @@ const optionsSchema = Joi.object({
  * @returns ClientAuth
  * @class ClientFederatedCredential
  */
-function ClientFederatedCredential(assertion) {
+function clientFederatedCredential(assertion) {
   return (_as, client, body) => {
     body.set('client_id', client.client_id)
     body.set(

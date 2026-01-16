@@ -1,4 +1,4 @@
-import escape from 'lodash/escape.js'
+import escapeHtml from 'lodash/escape.js'
 
 /**
  * Sets the host, protocol and port of a URL to use the external address
@@ -25,7 +25,9 @@ export function asExternalUrl(url, external) {
 export const redirectWithRefresh = (h, redirect) => {
   return h
     .response(
-      `<html><head><meta http-equiv="refresh" content="0;URL='${escape(redirect)}'"></head><body></body></html>`
+      `<html><head><meta http-equiv="refresh" content="0;URL='${escapeHtml(
+        redirect
+      )}'"></head><body></body></html>`
     )
     .takeover()
 }

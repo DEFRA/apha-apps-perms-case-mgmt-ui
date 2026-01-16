@@ -153,4 +153,38 @@ describe('federated-oidc scheme', () => {
     )
     expect(result).toEqual({ access_token: 'new-access' })
   })
+
+  test('pre-login falls back to nonce when PKCE is unsupported and defaults referrer safely', async () => {
+    discoveryMock.mockResolvedValueOnce({
+      serverMetadata: () => ({
+        supportsPKCE: () => false
+      })
+    })
+
+    const server = mockServer()
+    await federatedOidc.register(server)
+
+    const schemeFn = server.auth.scheme.mock.calls[0][1]
+    const strategyOptions = server.auth.strategy.mock.calls[0][2]
+    const { authenticate } = schemeFn(server, strategyOptions)
+
+    const flash = vi.fn()
+    const set = vi.fn()
+    const request = {
+      yar: { flash, set },
+      query: { next: 'http://example.com/auth/callback?code=abc' }
+    }
+
+    const redirect = vi.fn(() => ({ takeover: () => 'taken' }))
+    const h = { redirect }
+
+    await authenticate(request, h)
+
+    expect(calculatePKCECodeChallenge).toHaveBeenCalledWith('code-verifier')
+    expect(set).toHaveBeenCalledWith('oidc-auth', {
+      codeVerifier: 'code-verifier',
+      nonce: 'nonce'
+    })
+    expect(flash).toHaveBeenCalledWith(referrerFlashKey, '/')
+  })
 })

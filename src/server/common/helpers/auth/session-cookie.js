@@ -27,19 +27,17 @@ const sessionCookie = {
           const currentUserSession = sessionId
             ? await request.getUserSession(sessionId)
             : null
-          if (currentUserSession?.isAuthenticated) {
-            const refreshedUserSession =
-              await request.refreshToken(currentUserSession)
-            const userSession = !refreshedUserSession
-              ? currentUserSession
-              : refreshedUserSession
-
-            return {
-              isValid: true,
-              credentials: userSession
-            }
-          } else {
+          if (!currentUserSession?.isAuthenticated) {
             return { isValid: false }
+          }
+
+          const refreshedUserSession =
+            await request.refreshToken(currentUserSession)
+          const userSession = refreshedUserSession ?? currentUserSession
+
+          return {
+            isValid: true,
+            credentials: userSession
           }
         }
       })

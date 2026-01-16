@@ -14,7 +14,7 @@ describe('refresh-token', () => {
 
     const result = await refreshTokenIfExpired(() => {}, request, null)
 
-    expect(result).toBeUndefined()
+    expect(result).toBeNull()
     expect(refreshUserSession).not.toHaveBeenCalled()
   })
 
@@ -28,7 +28,7 @@ describe('refresh-token', () => {
 
     const result = await refreshTokenIfExpired(() => {}, request, session)
 
-    expect(result).toBeUndefined()
+    expect(result).toBeNull()
     expect(refreshUserSession).not.toHaveBeenCalled()
   })
 
@@ -66,7 +66,7 @@ describe('refresh-token', () => {
 
     const result = await refreshTokenIfExpired(refreshFn, request, session)
 
-    expect(result).toBeUndefined()
+    expect(result).toBeNull()
     expect(removeAuthenticatedUser).toHaveBeenCalledWith(request)
   })
 })

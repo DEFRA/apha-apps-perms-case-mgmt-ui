@@ -9,13 +9,14 @@ import { createLogger } from '../logging/logger.js'
 const logger = createLogger()
 
 export class CognitoFederatedCredentialProvider {
+  token = null
+  logins = {
+    [config.get('azureFederatedCredentials.providerName')]:
+      'apha-apps-perms-case-mgmt-ui'
+  }
+
   constructor(poolId) {
-    this.token = null
     this.poolId = poolId
-    this.logins = {
-      [config.get('azureFederatedCredentials.providerName')]:
-        'apha-apps-perms-case-mgmt-ui'
-    }
     this.client = new CognitoIdentityClient()
   }
 

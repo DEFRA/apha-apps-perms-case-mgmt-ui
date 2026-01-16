@@ -10,7 +10,7 @@ async function getUserSession(
     return null
   }
 
-  return await this.server.session.get(sessionId)
+  return this.server.session.get(sessionId)
 }
 
 export { getUserSession }
