@@ -51,6 +51,12 @@ export const config = convict({
     format: String,
     default: path.resolve(dirname, '../..')
   },
+  appBaseUrl: {
+    doc: 'Application base URL',
+    format: String,
+    default: 'http://localhost:3000',
+    env: 'APP_BASE_URL'
+  },
   assetPath: {
     doc: 'Asset path',
     format: String,
@@ -106,6 +112,54 @@ export const config = convict({
     default: null,
     env: 'HTTP_PROXY'
   },
+  azureFederatedCredentials: {
+    enableMocking: {
+      doc: 'Turns on OIDC mock support',
+      format: Boolean,
+      default: !isProduction,
+      env: 'AZURE_CREDENTIALS_ENABLE_MOCKING'
+    },
+    identityPoolId: {
+      doc: 'Azure Federated Credential Pool ID',
+      format: String,
+      env: 'AZURE_IDENTITY_POOL_ID',
+      nullable: true,
+      default: null
+    },
+    providerName: {
+      doc: 'Cognito developer provider name',
+      format: String,
+      env: 'AZURE_CREDENTIAL_PROVIDER_NAME',
+      default: 'apha-apps-perms-case-mgmt-ui-aad-access'
+    }
+  },
+  azureTenantId: {
+    doc: 'Azure Active Directory Tenant ID',
+    format: String,
+    env: 'AZURE_TENANT_ID',
+    default: '6f504113-6b64-43f2-ade9-242e05780007'
+  },
+  azureClientId: {
+    doc: 'Azure App Client ID',
+    format: String,
+    env: 'AZURE_CLIENT_ID',
+    default: '26372ac9-d8f0-4da9-a17e-938eb3161d8e'
+  },
+  azureClientSecret: {
+    doc: 'Azure App Client Secret. Defaults to stub secret',
+    format: String,
+    sensitive: true,
+    env: 'AZURE_CLIENT_SECRET',
+    default: 'test_value'
+  },
+  get oidcWellKnownConfigurationUrl() {
+    return {
+      doc: 'OIDC .well-known configuration URL. Defaults to the stub',
+      format: String,
+      env: 'OIDC_WELL_KNOWN_CONFIGURATION_URL',
+      default: `http://cdp.127.0.0.1.sslip.io:3939/${this.azureTenantId.default}/v2.0/.well-known/openid-configuration`
+    }
+  },
   isSecureContextEnabled: {
     doc: 'Enable Secure Context',
     format: Boolean,
@@ -131,6 +185,12 @@ export const config = convict({
         format: String,
         default: 'session',
         env: 'SESSION_CACHE_NAME'
+      },
+      segment: {
+        doc: 'Isolate cached items within the cache partition',
+        format: String,
+        default: 'session',
+        env: 'SERVER_CACHE_SEGMENT'
       },
       ttl: {
         doc: 'server side session cache ttl',

@@ -1,0 +1,156 @@
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+
+import {
+  federatedOidc,
+  refreshToken,
+  referrerFlashKey
+} from './federated-oidc.js'
+
+const discoveryMock = vi.fn()
+const buildAuthorizationUrl = vi.fn()
+const authorizationCodeGrant = vi.fn()
+const refreshTokenGrant = vi.fn()
+const randomPKCECodeVerifier = vi.fn()
+const calculatePKCECodeChallenge = vi.fn()
+const randomNonce = vi.fn()
+
+vi.mock('openid-client', () => ({
+  discovery: (...args) => discoveryMock(...args),
+  buildAuthorizationUrl: (...args) => buildAuthorizationUrl(...args),
+  authorizationCodeGrant: (...args) => authorizationCodeGrant(...args),
+  refreshTokenGrant: (...args) => refreshTokenGrant(...args),
+  randomPKCECodeVerifier: (...args) => randomPKCECodeVerifier(...args),
+  calculatePKCECodeChallenge: (...args) => calculatePKCECodeChallenge(...args),
+  randomNonce: (...args) => randomNonce(...args),
+  allowInsecureRequests: vi.fn()
+}))
+
+const mockOidcConfig = {
+  serverMetadata: () => ({
+    supportsPKCE: () => true
+  })
+}
+
+const mockServer = () => ({
+  federatedCredentials: {
+    getToken: vi.fn().mockResolvedValue('federated-token')
+  },
+  auth: {
+    scheme: vi.fn(),
+    strategy: vi.fn()
+  },
+  decorate: vi.fn()
+})
+
+describe('federated-oidc scheme', () => {
+  beforeEach(() => {
+    discoveryMock.mockResolvedValue(mockOidcConfig)
+    buildAuthorizationUrl.mockReturnValue('https://login.example/authorize')
+    authorizationCodeGrant.mockResolvedValue({
+      access_token: 'access',
+      refresh_token: 'refresh',
+      id_token: 'id-token',
+      expiresIn: () => 3600,
+      claims: () => ({
+        oid: 'user-1',
+        name: 'User One',
+        email: 'user@example.com',
+        login_hint: 'hint'
+      })
+    })
+    refreshTokenGrant.mockResolvedValue({ access_token: 'new-access' })
+    randomPKCECodeVerifier.mockReturnValue('code-verifier')
+    calculatePKCECodeChallenge.mockResolvedValue('code-challenge')
+    randomNonce.mockReturnValue('nonce')
+  })
+
+  test('pre-login redirects to the authorization URL with PKCE and stores verifier in session', async () => {
+    const server = mockServer()
+    await federatedOidc.register(server)
+
+    const schemeFn = server.auth.scheme.mock.calls[0][1]
+    const strategyOptions = server.auth.strategy.mock.calls[0][2]
+    const { authenticate } = schemeFn(server, strategyOptions)
+
+    const flash = vi.fn()
+    const set = vi.fn()
+    const request = {
+      yar: { flash, set },
+      query: {},
+      info: { referrer: 'http://localhost/start?x=1' }
+    }
+
+    const redirect = vi.fn(() => ({ takeover: () => 'taken' }))
+    const h = { redirect }
+
+    const response = await authenticate(request, h)
+
+    expect(buildAuthorizationUrl).toHaveBeenCalledWith(mockOidcConfig, {
+      redirect_uri: strategyOptions.redirectUri,
+      scope: strategyOptions.scope,
+      code_challenge: 'code-challenge',
+      code_challenge_method: 'S256'
+    })
+    expect(set).toHaveBeenCalledWith('oidc-auth', {
+      codeVerifier: 'code-verifier',
+      nonce: undefined
+    })
+    expect(flash).toHaveBeenCalledWith(referrerFlashKey, '/start?x=1')
+    expect(response).toBe('taken')
+  })
+
+  test('post-login authenticates with claims from the token', async () => {
+    const server = mockServer()
+    await federatedOidc.register(server)
+
+    const schemeFn = server.auth.scheme.mock.calls[0][1]
+    const strategyOptions = server.auth.strategy.mock.calls[0][2]
+    const { authenticate } = schemeFn(server, strategyOptions)
+
+    const request = {
+      yar: {
+        get: vi
+          .fn()
+          .mockReturnValue({ codeVerifier: 'code-verifier', nonce: 'nonce' })
+      },
+      query: { code: 'abc' },
+      url: 'http://localhost/auth/callback?code=abc'
+    }
+
+    const authenticated = vi.fn((payload) => payload)
+    const h = { authenticated }
+
+    const result = await authenticate(request, h)
+
+    expect(authorizationCodeGrant).toHaveBeenCalled()
+    expect(result.credentials.profile).toEqual(
+      expect.objectContaining({
+        id: 'user-1',
+        email: 'user@example.com',
+        displayName: 'User One',
+        loginHint: 'hint'
+      })
+    )
+  })
+
+  test('refreshToken calls discovery and refreshTokenGrant with provided options', async () => {
+    const options = {
+      discoveryUri: 'https://login.example/.well-known/openid-configuration',
+      clientId: 'client-id',
+      scope: 'api://client-id/cdp.user',
+      tokenProvider: vi.fn().mockResolvedValue('federated-token')
+    }
+
+    const result = await refreshToken(options, 'refresh-token')
+
+    expect(discoveryMock).toHaveBeenCalled()
+    expect(refreshTokenGrant).toHaveBeenCalledWith(
+      mockOidcConfig,
+      'refresh-token',
+      {
+        scope: options.scope
+      }
+    )
+    expect(result).toEqual({ access_token: 'new-access' })
+  })
+})
