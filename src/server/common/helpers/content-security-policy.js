@@ -2,7 +2,7 @@ import Blankie from 'blankie'
 
 /**
  * Manage content security policies.
- * @type {{plugin: any, options: any}}
+ * @type {import('@hapi/hapi').ServerRegisterPluginObject<any>}
  */
 const contentSecurityPolicy = {
   plugin: Blankie,
