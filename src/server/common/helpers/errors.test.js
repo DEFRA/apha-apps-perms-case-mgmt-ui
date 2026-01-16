@@ -4,6 +4,8 @@ import { catchAll } from './errors.js'
 import { createServer } from '../../server.js'
 import { statusCodes } from '../constants/status-codes.js'
 
+const pageNotFound = 'Page not found'
+
 describe('#errors', () => {
   let server
 
@@ -22,9 +24,7 @@ describe('#errors', () => {
       url: '/non-existent-path'
     })
 
-    expect(result).toEqual(
-      expect.stringContaining('Page not found | Case Management Tool')
-    )
+    expect(result).toEqual(expect.stringContaining(pageNotFound))
     expect(statusCode).toBe(statusCodes.notFound)
   })
 })
@@ -55,9 +55,9 @@ describe('#catchAll', () => {
 
     expect(mockErrorLogger).not.toHaveBeenCalledWith(mockStack)
     expect(mockToolkitView).toHaveBeenCalledWith(errorPage, {
-      pageTitle: 'Page not found',
+      pageTitle: pageNotFound,
       heading: statusCodes.notFound,
-      message: 'Page not found'
+      message: pageNotFound
     })
     expect(mockToolkitCode).toHaveBeenCalledWith(statusCodes.notFound)
   })

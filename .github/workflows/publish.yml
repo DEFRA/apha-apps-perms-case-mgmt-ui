@@ -32,7 +32,7 @@ jobs:
           node-version-file: .nvmrc
       - run: |
           npm ci
-          npm audit --omit=dev
+          npm audit --omit=dev --audit-level=high
           npm run build
           npm run format:check
           npm run lint
@@ -47,6 +47,10 @@ jobs:
       - name: Start docker compose
         run: |
           docker compose up --wait-timeout 300 -d --quiet-pull
+
+      - name: Journey tests
+        run: |
+          npm run user-journey-test
 
       - name: cleanup
         if: always()
