@@ -12,11 +12,7 @@ describe('refresh-token', () => {
       logger: { info: vi.fn(), debug: vi.fn() }
     }
 
-    const result = await refreshTokenIfExpired(
-      async () => {},
-      request,
-      null
-    )
+    const result = await refreshTokenIfExpired(async () => {}, request, null)
 
     expect(result).toBeNull()
     expect(refreshUserSession).not.toHaveBeenCalled()
@@ -30,11 +26,7 @@ describe('refresh-token', () => {
       expiresAt: add(Date.now(), { minutes: 5 }).toISOString()
     }
 
-    const result = await refreshTokenIfExpired(
-      async () => {},
-      request,
-      session
-    )
+    const result = await refreshTokenIfExpired(async () => {}, request, session)
 
     expect(result).toBeNull()
     expect(refreshUserSession).not.toHaveBeenCalled()

@@ -84,12 +84,12 @@ function scheme(_server, options) {
       } else {
         // User has logged in and been redirected back to the auth callback
         try {
-      const credentials = await postLogin(
-        request,
-        oidcConfig,
-        validatedOptions
-      )
-      return h.authenticated({ credentials })
+          const credentials = await postLogin(
+            request,
+            oidcConfig,
+            validatedOptions
+          )
+          return h.authenticated({ credentials })
         } catch (e) {
           logger.error(e, 'Post Federated login failed')
           return Boom.unauthorized(e)
@@ -154,15 +154,11 @@ async function postLogin(request, oidcConfig, options) {
   const currentUrl = asExternalUrl(request.url, config.get('appBaseUrl'))
 
   logger.info('validating token')
-  const token = await openid.authorizationCodeGrant(
-    oidcConfig,
-    currentUrl,
-    {
-      pkceCodeVerifier: codeVerifier,
-      expectedNonce: nonce,
-      idTokenExpected: true
-    }
-  )
+  const token = await openid.authorizationCodeGrant(oidcConfig, currentUrl, {
+    pkceCodeVerifier: codeVerifier,
+    expectedNonce: nonce,
+    idTokenExpected: true
+  })
 
   Hoek.assert(token, 'Failed to validate token')
 
