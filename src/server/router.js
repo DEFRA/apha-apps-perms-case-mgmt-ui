@@ -4,8 +4,6 @@ import { home } from './home/index.js'
 import { about } from './about/index.js'
 import { health } from './health/index.js'
 import { serveStaticFiles } from './common/helpers/serve-static-files.js'
-import { forceHttpError } from './force-http-error/index.js'
-import { forceErrorLog } from './force-error-log/index.js'
 
 export const router = {
   plugin: {
@@ -17,7 +15,7 @@ export const router = {
       await server.register([health])
 
       // Application specific routes, add your own routes here
-      await server.register([home, about, forceHttpError, forceErrorLog])
+      await server.register([home, about])
 
       // Static assets
       await server.register([serveStaticFiles])
