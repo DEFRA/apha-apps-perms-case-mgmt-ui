@@ -103,7 +103,7 @@ npm install
 
 ### Authentication (Azure AD)
 
-- All application routes require an authenticated Azure AD session (health and static assets remain open); start the sign-in flow at `/login` and end it at `/logout`.
+- All application routes require an authenticated Azure AD session (health and static assets remain open); start the sign-in flow at `/login` and end it at `/auth/logout`.
 - Local development defaults to mocked federated credentials by leaving `AZURE_CREDENTIALS_ENABLE_MOCKING=true`, using the stub well-known endpoint and HTTP.
 - To use real Azure, provide `APP_BASE_URL`, `AZURE_IDENTITY_POOL_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, and, if needed, override `OIDC_WELL_KNOWN_CONFIGURATION_URL`.
 - Optional: override the Cognito developer provider name via `AZURE_CREDENTIAL_PROVIDER_NAME` (default: `apha-apps-perms-case-mgmt-ui-aad-access`).

@@ -7,7 +7,7 @@ const logout = {
       server.route([
         {
           method: 'GET',
-          path: '/logout',
+          path: '/auth/logout',
           ...logoutController
         }
       ])
