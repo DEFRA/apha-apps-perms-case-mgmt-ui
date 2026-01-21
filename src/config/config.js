@@ -152,6 +152,37 @@ export const config = convict({
     env: 'AZURE_CLIENT_SECRET',
     default: 'test_value'
   },
+  integrationBridge: {
+    baseUrl: {
+      doc: 'Base URL for the APHA Integration Bridge service',
+      format: 'url',
+      env: 'APHA_INTEGRATION_BRIDGE_BASE_URL',
+      nullable: true,
+      default: null
+    },
+    tokenUrl: {
+      doc: 'Cognito OAuth token endpoint for the APHA Integration Bridge',
+      format: 'url',
+      env: 'APHA_INTEGRATION_BRIDGE_TOKEN_URL',
+      nullable: true,
+      default: null
+    },
+    clientId: {
+      doc: 'Client ID to authenticate with the APHA Integration Bridge',
+      format: String,
+      env: 'APHA_INTEGRATION_BRIDGE_CLIENT_ID',
+      nullable: true,
+      default: null
+    },
+    clientSecret: {
+      doc: 'Client secret to authenticate with the APHA Integration Bridge',
+      format: String,
+      env: 'APHA_INTEGRATION_BRIDGE_CLIENT_SECRET',
+      nullable: true,
+      sensitive: true,
+      default: null
+    }
+  },
   get oidcWellKnownConfigurationUrl() {
     return {
       doc: 'OIDC .well-known configuration URL. Defaults to the stub',

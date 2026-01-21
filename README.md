@@ -108,6 +108,12 @@ npm install
 - To use real Azure, provide `APP_BASE_URL`, `AZURE_IDENTITY_POOL_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, and, if needed, override `OIDC_WELL_KNOWN_CONFIGURATION_URL`.
 - Optional: override the Cognito developer provider name via `AZURE_CREDENTIAL_PROVIDER_NAME` (default: `apha-apps-perms-case-mgmt-ui-aad-access`).
 
+### APHA Integration Bridge
+
+- Login now checks Salesforce presence by calling `POST /case-management/users/find` via the integration bridge; access is denied when no user is returned.
+- Configure the client-credential flow with `APHA_INTEGRATION_BRIDGE_BASE_URL`, `APHA_INTEGRATION_BRIDGE_TOKEN_URL`, `APHA_INTEGRATION_BRIDGE_CLIENT_ID`, and `APHA_INTEGRATION_BRIDGE_CLIENT_SECRET`.
+- The integration client caches Cognito access tokens in memory to avoid unnecessary token requests.
+
 ### Development
 
 To run the application in `development` mode run:
