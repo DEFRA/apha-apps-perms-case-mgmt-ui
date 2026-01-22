@@ -32,14 +32,15 @@ const mockOidcConfig = {
 }
 
 const mockServer = () => ({
-  federatedCredentials: {
-    getToken: vi.fn().mockResolvedValue('federated-token')
+  app: {
+    federatedCredentials: {
+      getToken: vi.fn().mockResolvedValue('federated-token')
+    }
   },
   auth: {
     scheme: vi.fn(),
     strategy: vi.fn()
-  },
-  decorate: vi.fn()
+  }
 })
 
 describe('federated-oidc scheme', () => {
@@ -80,7 +81,7 @@ describe('federated-oidc scheme', () => {
       info: { referrer: 'http://localhost/start?x=1' }
     }
 
-    const redirect = vi.fn(() => ({ takeover: () => 'taken' }))
+    const redirect = vi.fn(() => 'redirected')
     const h = { redirect }
 
     const response = await authenticate(request, h)
@@ -96,7 +97,7 @@ describe('federated-oidc scheme', () => {
       nonce: undefined
     })
     expect(flash).toHaveBeenCalledWith(referrerFlashKey, '/start?x=1')
-    expect(response).toBe('taken')
+    expect(response).toBe('redirected')
   })
 
   test('post-login authenticates with claims from the token', async () => {
@@ -197,10 +198,10 @@ describe('federated-oidc scheme', () => {
     const set = vi.fn()
     const request = {
       yar: { flash, set },
-      query: { next: 'http://example.com/auth/callback?code=abc' }
+      query: {}
     }
 
-    const redirect = vi.fn(() => ({ takeover: () => 'taken' }))
+    const redirect = vi.fn(() => 'redirected')
     const h = { redirect }
 
     await authenticate(request, h)

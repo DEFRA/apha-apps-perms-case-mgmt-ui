@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 
-import { authCallbackController } from './controller.js'
+import { authCallbackController } from './callback.js'
 
 const { createUserSession, redirectWithRefresh } = vi.hoisted(() => ({
   createUserSession: vi.fn(),

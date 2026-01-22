@@ -17,14 +17,14 @@ export const federatedOidc = {
   dependencies: ['federated-credentials'],
   register: function (server) {
     const useMocks = config.get('azureFederatedCredentials.enableMocking')
-    // noinspection JSDeprecatedSymbols
+
     /** @type {{ discoveryUri: string, redirectUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, useMocks: boolean, execute: Array<(config?: any) => void> }} */
     const options = {
       discoveryUri: config.get('oidcWellKnownConfigurationUrl'),
       redirectUri: config.get('appBaseUrl') + callbackPath,
       clientId: config.get('azureClientId'),
-      scope: `api://${config.get('azureClientId')}/cdp.user openid profile email offline_access user.read`,
-      tokenProvider: () => server.federatedCredentials.getToken(),
+      scope: `openid profile email`,
+      tokenProvider: () => server.app.federatedCredentials.getToken(),
       useMocks,
       // Disable the HTTPS requirements when connecting to the mock.
       // OpenId flags this as deprecated purely to warn that it's not for prod use.
@@ -33,25 +33,25 @@ export const federatedOidc = {
         : [] // NOSONAR keep for local mock http support
     }
 
+    server.app.refreshUserSession = (request, userSession) => {
+      return refreshTokenIfExpired(
+        (token) => refreshToken(options, token),
+        request,
+        userSession
+      )
+    }
+
     server.auth.scheme('federated-oidc', scheme)
     server.auth.strategy(
       'azure-oidc',
       'federated-oidc',
       /** @type {any} */ (options)
     )
-
-    server.decorate('request', 'refreshToken', async function (userSession) {
-      return refreshTokenIfExpired(
-        (token) => refreshToken(options, token),
-        this,
-        userSession
-      )
-    })
   }
 }
 
 function scheme(_server, options) {
-  const validatedOptions = Joi.attempt(Hoek.clone(options), optionsSchema)
+  const validatedOptions = Joi.attempt(options, optionsSchema)
 
   return {
     authenticate: async function (request, h) {
@@ -76,7 +76,7 @@ function scheme(_server, options) {
             oidcConfig,
             validatedOptions
           )
-          return h.redirect(redirectTo).takeover()
+          return h.redirect(redirectTo)
         } catch (e) {
           logger.error(e, 'PreLogin Federated login failed')
           return Boom.unauthorized(e)
@@ -125,10 +125,8 @@ async function preLogin(request, oidcConfig, options) {
     nonce
   })
 
-  const refererPath = getRefererAsRelativeURL(
-    request?.query?.next ?? request?.info?.referrer,
-    '/'
-  )
+  const refererPath = getRefererAsRelativeURL(request?.info?.referrer, '/')
+
   request.yar.flash(referrerFlashKey, refererPath)
 
   return openid.buildAuthorizationUrl(oidcConfig, parameters)
@@ -167,7 +165,6 @@ async function postLogin(request, oidcConfig, options) {
   return {
     expiresIn,
     token: token.access_token,
-    accessToken: token.access_token,
     refreshToken: token.refresh_token,
     idToken: token.id_token,
     claims,

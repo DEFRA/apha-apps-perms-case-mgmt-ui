@@ -18,7 +18,6 @@ import { federatedOidc } from './common/helpers/auth/federated-oidc.js'
 import { cognitoFederatedCredentials } from './common/helpers/auth/cognito.js'
 import { sessionCookie } from './common/helpers/auth/session-cookie.js'
 import { setupCaches } from './common/helpers/session-cache/setup-caches.js'
-import { addDecorators } from './common/helpers/add-decorators.js'
 import { mockCognitoFederatedCredentials } from './common/helpers/auth/mock-cognito.js'
 
 export async function createServer() {
@@ -61,7 +60,6 @@ export async function createServer() {
   })
 
   setupCaches(server)
-  addDecorators(server)
 
   const useOidcMocks = config.get('azureFederatedCredentials.enableMocking')
   const credentialProvider = useOidcMocks

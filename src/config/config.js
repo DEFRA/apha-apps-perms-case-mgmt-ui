@@ -145,13 +145,6 @@ export const config = convict({
     env: 'AZURE_CLIENT_ID',
     default: '26372ac9-d8f0-4da9-a17e-938eb3161d8e'
   },
-  azureClientSecret: {
-    doc: 'Azure App Client Secret. Defaults to stub secret',
-    format: String,
-    sensitive: true,
-    env: 'AZURE_CLIENT_SECRET',
-    default: 'test_value'
-  },
   get oidcWellKnownConfigurationUrl() {
     return {
       doc: 'OIDC .well-known configuration URL. Defaults to the stub',

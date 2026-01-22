@@ -15,17 +15,21 @@ const authCallbackController = {
   },
   handler: async (request, h) => {
     const { auth, sessionCookie, yar, logger } = request
+
     if (auth.isAuthenticated) {
       const sessionId = randomUUID()
 
       logger.info('Creating user session')
+
       await createUserSession(request, sessionId)
 
       sessionCookie.set({ sessionId })
     }
 
     const redirect = yar.flash(referrerFlashKey)?.at(0) ?? '/'
+
     logger.info(`Login complete, redirecting user to ${redirect}`)
+
     return redirectWithRefresh(h, redirect)
   }
 }

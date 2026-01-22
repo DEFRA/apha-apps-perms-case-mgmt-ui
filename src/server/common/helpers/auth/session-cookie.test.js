@@ -2,16 +2,19 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import hapi from '@hapi/hapi'
 
 import { sessionCookie } from './session-cookie.js'
-import { addDecorators } from '../add-decorators.js'
 
 describe('session-cookie validate', () => {
   let server
+  let app
   let validateFn
+  let session
 
   beforeEach(async () => {
     server = hapi.server()
-    addDecorators(server)
-    server.decorate('request', 'refreshToken', vi.fn())
+    app = /** @type {any} */ (server.app)
+    session = { get: vi.fn() }
+    app.session = session
+    app.refreshUserSession = vi.fn()
 
     const strategySpy = vi.spyOn(server.auth, 'strategy')
     await sessionCookie.plugin.register(server)
@@ -23,9 +26,8 @@ describe('session-cookie validate', () => {
   })
 
   test('returns isValid false when there is no session', async () => {
-    const request = {
-      getUserSession: vi.fn().mockResolvedValue(null)
-    }
+    session.get.mockResolvedValue(null)
+    const request = { server, state: {} }
 
     const result = await validateFn(request, { sessionId: 'session-id' })
 
@@ -44,15 +46,14 @@ describe('session-cookie validate', () => {
       ...userSession,
       token: 'new-access-token'
     }
-    const refreshToken = vi.fn().mockResolvedValue(refreshedSession)
-    const request = {
-      getUserSession: vi.fn().mockResolvedValue(userSession),
-      refreshToken
-    }
+    session.get.mockResolvedValue(userSession)
+    const refreshUserSession = vi.fn().mockResolvedValue(refreshedSession)
+    app.refreshUserSession = refreshUserSession
+    const request = { server, state: {} }
 
     const result = await validateFn(request, { sessionId: 'session-id' })
 
-    expect(refreshToken).toHaveBeenCalledWith(userSession)
+    expect(refreshUserSession).toHaveBeenCalledWith(request, userSession)
     expect(result).toEqual({
       isValid: true,
       credentials: refreshedSession

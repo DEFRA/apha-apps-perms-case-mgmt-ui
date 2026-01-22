@@ -109,14 +109,17 @@ describe('cognitoFederatedCredentials plugin', () => {
 
   test('decorates the server with a credential provider when configured', async () => {
     config.set('azureFederatedCredentials.identityPoolId', 'pool-id')
-    const decorate = vi.fn()
+    const server = { decorate: vi.fn(), app: {} }
 
-    await cognitoFederatedCredentials.plugin.register({ decorate })
+    await cognitoFederatedCredentials.plugin.register(server)
 
-    expect(decorate).toHaveBeenCalledWith(
+    expect(server.decorate).toHaveBeenCalledWith(
       'server',
       'federatedCredentials',
       expect.any(CognitoFederatedCredentialProvider)
+    )
+    expect(server.app.federatedCredentials).toBeInstanceOf(
+      CognitoFederatedCredentialProvider
     )
   })
 })

@@ -1,4 +1,4 @@
-import { authCallbackController } from './controller.js'
+import { authCallbackController } from './callback.js'
 
 const auth = {
   plugin: {

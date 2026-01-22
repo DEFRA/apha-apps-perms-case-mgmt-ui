@@ -6,14 +6,16 @@ import {
   refreshUserSession,
   removeAuthenticatedUser
 } from './user-session.js'
+import * as dropSession from './drop-user-session.js'
 
 describe('user-session', () => {
   test('removeAuthenticatedUser drops session and clears cookies', () => {
     const clear = vi.fn()
     const unstate = vi.fn()
-    const dropUserSession = vi.fn()
+    const dropUserSession = vi
+      .spyOn(dropSession, 'dropUserSession')
+      .mockResolvedValue()
     const request = {
-      dropUserSession,
       sessionCookie: {
         clear,
         h: {
@@ -24,7 +26,7 @@ describe('user-session', () => {
 
     removeAuthenticatedUser(request)
 
-    expect(dropUserSession).toHaveBeenCalled()
+    expect(dropUserSession).toHaveBeenCalledWith(request)
     expect(clear).toHaveBeenCalled()
     expect(unstate).toHaveBeenCalledWith('csrfToken')
     expect(unstate).toHaveBeenCalledWith('userSessionCookie')
@@ -49,7 +51,7 @@ describe('user-session', () => {
         }
       },
       server: {
-        session: { set }
+        app: { session: { set } }
       }
     }
 
@@ -79,7 +81,7 @@ describe('user-session', () => {
     const set = vi.fn()
     const request = {
       logger: { info: vi.fn(), debug: vi.fn() },
-      server: { session: { set } },
+      server: { app: { session: { set } } },
       state: { userSessionCookie: { sessionId: 'session-id' } }
     }
     const refreshTokenResponse = {

@@ -4,13 +4,14 @@
  * @returns {Promise<void>}
  */
 async function dropUserSession(
-  sessionId = this.state?.userSessionCookie?.sessionId
+  request,
+  sessionId = request?.state?.userSessionCookie?.sessionId
 ) {
-  if (!sessionId || !this.server.session) {
+  if (!sessionId || !request?.server?.app?.session) {
     return
   }
 
-  await this.server.session.drop(sessionId)
+  await request.server.app.session.drop(sessionId)
 }
 
 export { dropUserSession }

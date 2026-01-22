@@ -1,5 +1,6 @@
 import authCookie from '@hapi/cookie'
 import { config } from '../../../../config/config.js'
+import { getUserSession } from './get-user-session.js'
 
 const sessionCookieConfig = config.get('session.cookie')
 
@@ -20,19 +21,23 @@ const sessionCookie = {
         },
         keepAlive: true,
         appendNext: true,
-        redirectTo: '/login',
+        redirectTo: '/auth/login',
         requestDecoratorName: 'sessionCookie',
         validate: async (request, session) => {
           const sessionId = session?.sessionId
+
           const currentUserSession = sessionId
-            ? await request.getUserSession(sessionId)
+            ? await getUserSession(request, sessionId)
             : null
+
           if (!currentUserSession?.isAuthenticated) {
             return { isValid: false }
           }
 
-          const refreshedUserSession =
-            await request.refreshToken(currentUserSession)
+          const refreshedUserSession = server.app.refreshUserSession
+            ? await server.app.refreshUserSession(request, currentUserSession)
+            : null
+
           const userSession = refreshedUserSession ?? currentUserSession
 
           return {
