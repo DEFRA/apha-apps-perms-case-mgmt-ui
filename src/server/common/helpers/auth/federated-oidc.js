@@ -76,7 +76,7 @@ function scheme(_server, options) {
             oidcConfig,
             validatedOptions
           )
-          return h.redirect(redirectTo)
+          return h.redirect(redirectTo).takeover()
         } catch (e) {
           logger.error(e, 'PreLogin Federated login failed')
           return Boom.unauthorized(e)

@@ -75,13 +75,14 @@ describe('federated-oidc scheme', () => {
 
     const flash = vi.fn()
     const set = vi.fn()
+    const takeover = vi.fn().mockReturnValue('redirected')
     const request = {
       yar: { flash, set },
       query: {},
       info: { referrer: 'http://localhost/start?x=1' }
     }
 
-    const redirect = vi.fn(() => 'redirected')
+    const redirect = vi.fn(() => ({ takeover }))
     const h = { redirect }
 
     const response = await authenticate(request, h)
@@ -97,6 +98,8 @@ describe('federated-oidc scheme', () => {
       nonce: undefined
     })
     expect(flash).toHaveBeenCalledWith(referrerFlashKey, '/start?x=1')
+    expect(redirect).toHaveBeenCalled()
+    expect(takeover).toHaveBeenCalled()
     expect(response).toBe('redirected')
   })
 
@@ -196,12 +199,13 @@ describe('federated-oidc scheme', () => {
 
     const flash = vi.fn()
     const set = vi.fn()
+    const takeover = vi.fn().mockReturnValue('redirected')
     const request = {
       yar: { flash, set },
       query: {}
     }
 
-    const redirect = vi.fn(() => 'redirected')
+    const redirect = vi.fn(() => ({ takeover }))
     const h = { redirect }
 
     await authenticate(request, h)
