@@ -75,9 +75,9 @@ describe('federated-oidc scheme', () => {
     refreshTokenGrant.mockResolvedValue({ access_token: 'new-access' })
     randomPKCECodeVerifier.mockReturnValue('code-verifier')
     calculatePKCECodeChallenge.mockResolvedValue('code-challenge')
-  randomNonce.mockReturnValue('nonce')
-  allowInsecureRequests.mockClear()
-})
+    randomNonce.mockReturnValue('nonce')
+    allowInsecureRequests.mockClear()
+  })
 
   test('pre-login redirects to the authorization URL with PKCE and stores verifier in session', async () => {
     const server = mockServer()
@@ -356,10 +356,7 @@ describe('federated-oidc scheme', () => {
     await refreshToken(options, 'refresh-token')
 
     expect(body.set).toHaveBeenCalledWith('client_id', 'client-123')
-    expect(body.set).toHaveBeenCalledWith(
-      'client_assertion',
-      'federated-token'
-    )
+    expect(body.set).toHaveBeenCalledWith('client_assertion', 'federated-token')
   })
 
   test('pre-login preserves relative referrers safely', async () => {

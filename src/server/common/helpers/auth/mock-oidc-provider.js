@@ -114,7 +114,8 @@ const mockOidcProvider = {
           }
         },
         handler: (request, h) => {
-          const clientId = request.payload?.client_id ?? config.get('azureClientId')
+          const clientId =
+            request.payload?.client_id ?? config.get('azureClientId')
           const payload = {
             oid: 'mock-user',
             sub: 'mock-user',
