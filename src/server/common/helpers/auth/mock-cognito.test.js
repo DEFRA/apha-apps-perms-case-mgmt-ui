@@ -21,4 +21,14 @@ describe('mockCognitoFederatedCredentials', () => {
       expect.objectContaining({ getToken: expect.any(Function) })
     )
   })
+
+  test('returns the seeded token from the mock provider', async () => {
+    const server = { app: {} }
+
+    await mockCognitoFederatedCredentials.plugin.register(server)
+    const token = await server.app.federatedCredentials.getToken()
+
+    expect(typeof token).toBe('string')
+    expect(token).toBe(server.app.federatedCredentials.token)
+  })
 })

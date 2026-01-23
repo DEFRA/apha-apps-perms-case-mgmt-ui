@@ -34,6 +34,16 @@ describe('session-cookie validate', () => {
     expect(result).toEqual({ isValid: false })
   })
 
+  test('returns isValid false when no session id is provided', async () => {
+    session.get.mockResolvedValue(null)
+    const request = { server, state: {} }
+
+    const result = await validateFn(request, {})
+
+    expect(session.get).not.toHaveBeenCalled()
+    expect(result).toEqual({ isValid: false })
+  })
+
   test('returns isValid true when session exists', async () => {
     const userSession = {
       id: 'user-1',
@@ -57,6 +67,26 @@ describe('session-cookie validate', () => {
     expect(result).toEqual({
       isValid: true,
       credentials: refreshedSession
+    })
+  })
+
+  test('returns current session when no refresh function is registered', async () => {
+    const userSession = {
+      id: 'user-1',
+      isAuthenticated: true,
+      token: 'access-token',
+      refreshToken: 'refresh-token',
+      expiresAt: '2999-01-01T00:00:00.000Z'
+    }
+    session.get.mockResolvedValue(userSession)
+    app.refreshUserSession = undefined
+    const request = { server, state: {} }
+
+    const result = await validateFn(request, { sessionId: 'session-id' })
+
+    expect(result).toEqual({
+      isValid: true,
+      credentials: userSession
     })
   })
 })

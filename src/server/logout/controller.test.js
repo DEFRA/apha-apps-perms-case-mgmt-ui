@@ -46,4 +46,20 @@ describe('logoutController', () => {
     expect(redirect).toHaveBeenCalledWith('/')
     expect(result).toBe('redirected')
   })
+
+  test('falls back to app base URL when referrer is external', async () => {
+    const redirect = vi.fn().mockReturnValue('redirected')
+    const h = { redirect }
+    const request = {
+      auth: { credentials: { loginHint: 'user hint' } },
+      info: { referrer: 'https://example.com/other' }
+    }
+
+    await logoutController.handler(request, h)
+
+    const logoutUrl = redirect.mock.calls[0][0]
+    expect(logoutUrl).toContain(
+      `post_logout_redirect_uri=${encodeURIComponent(config.get('appBaseUrl'))}`
+    )
+  })
 })

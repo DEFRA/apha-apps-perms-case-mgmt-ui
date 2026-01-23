@@ -61,4 +61,11 @@ describe('authCallbackController', () => {
     expect(redirectWithRefresh).toHaveBeenCalledWith(h, '/')
     expect(response).toEqual({ redirectedTo: '/' })
   })
+
+  test('failAction wraps unauthorized errors', () => {
+    const boom = authCallbackController.options.response.failAction()
+
+    expect(boom.output.statusCode).toBe(401)
+    expect(boom.message).toBe('Unauthorized')
+  })
 })
