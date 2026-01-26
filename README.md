@@ -130,6 +130,7 @@ npm install
 
 - Login now checks Salesforce presence by calling `POST /case-management/users/find` via the integration bridge; access is denied when no user is returned.
 - Configure the client-credential flow with `APHA_INTEGRATION_BRIDGE_BASE_URL`, `APHA_INTEGRATION_BRIDGE_TOKEN_URL`, `APHA_INTEGRATION_BRIDGE_CLIENT_ID`, and `APHA_INTEGRATION_BRIDGE_CLIENT_SECRET`.
+- In development/test the bridge is mocked when `APHA_INTEGRATION_BRIDGE_ENABLE_MOCKING=true` (default). The mock returns success for any email unless you provide a comma-separated allowlist via `APHA_INTEGRATION_BRIDGE_MOCK_ALLOWLIST`, in which case only those emails are allowed.
 - The integration client caches Cognito access tokens in memory to avoid unnecessary token requests.
 
 ### Development

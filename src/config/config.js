@@ -153,6 +153,18 @@ export const config = convict({
     default: 'test_value'
   },
   integrationBridge: {
+    enableMocking: {
+      doc: 'Use the mock Integration Bridge client (intended for development/test)',
+      format: Boolean,
+      default: !isProduction,
+      env: 'APHA_INTEGRATION_BRIDGE_ENABLE_MOCKING'
+    },
+    mockAllowlist: {
+      doc: 'Comma separated list of email addresses allowed through the mock Integration Bridge',
+      format: String,
+      default: '',
+      env: 'APHA_INTEGRATION_BRIDGE_MOCK_ALLOWLIST'
+    },
     baseUrl: {
       doc: 'Base URL for the APHA Integration Bridge service',
       format: 'url',

@@ -3,6 +3,7 @@ import {
   IntegrationBridgeClient,
   IntegrationBridgeConfigurationError
 } from './client.js'
+import { MockIntegrationBridgeClient } from './mock-client.js'
 
 function buildIntegrationBridgeClient() {
   return new IntegrationBridgeClient({
@@ -13,7 +14,19 @@ function buildIntegrationBridgeClient() {
   })
 }
 
+function buildMockIntegrationBridgeClient() {
+  return new MockIntegrationBridgeClient(
+    config.get('integrationBridge.mockAllowlist')
+  )
+}
+
 function createIntegrationClient() {
+  const useMock = config.get('integrationBridge.enableMocking')
+
+  if (useMock) {
+    return buildMockIntegrationBridgeClient()
+  }
+
   try {
     return buildIntegrationBridgeClient()
   } catch (error) {
@@ -34,4 +47,4 @@ function createIntegrationClient() {
 }
 
 export const integrationClient = createIntegrationClient()
-export { buildIntegrationBridgeClient }
+export { buildIntegrationBridgeClient, buildMockIntegrationBridgeClient }
