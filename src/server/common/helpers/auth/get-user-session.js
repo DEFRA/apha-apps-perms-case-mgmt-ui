@@ -17,13 +17,14 @@
  * @returns {Promise<UserSession | null>}
  */
 async function getUserSession(
-  sessionId = this.state?.userSessionCookie?.sessionId
+  request,
+  sessionId = request?.state?.userSessionCookie?.sessionId
 ) {
-  if (!sessionId || !this.server.session) {
+  if (!sessionId || !request?.server?.app?.session) {
     return null
   }
 
-  return this.server.session.get(sessionId)
+  return request.server.app.session.get(sessionId)
 }
 
 export { getUserSession }

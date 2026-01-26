@@ -25,7 +25,9 @@ export const mockCognitoFederatedCredentials = {
       const tokenProvider = new MockCognitoFederatedCredentialProvider(
         crypto.randomUUID()
       )
-      server.decorate('server', 'federatedCredentials', tokenProvider)
+      server.app = server.app ?? {}
+
+      server.app.federatedCredentials = tokenProvider
     }
   }
 }

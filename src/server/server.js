@@ -18,8 +18,8 @@ import { federatedOidc } from './common/helpers/auth/federated-oidc.js'
 import { cognitoFederatedCredentials } from './common/helpers/auth/cognito.js'
 import { sessionCookie } from './common/helpers/auth/session-cookie.js'
 import { setupCaches } from './common/helpers/session-cache/setup-caches.js'
-import { addDecorators } from './common/helpers/add-decorators.js'
 import { mockCognitoFederatedCredentials } from './common/helpers/auth/mock-cognito.js'
+import { mockOidcProvider } from './common/helpers/auth/mock-oidc-provider.js'
 
 export async function createServer() {
   setupProxy()
@@ -61,27 +61,31 @@ export async function createServer() {
   })
 
   setupCaches(server)
-  addDecorators(server)
 
   const useOidcMocks = config.get('azureFederatedCredentials.enableMocking')
-  const credentialProvider = useOidcMocks
-    ? mockCognitoFederatedCredentials
-    : cognitoFederatedCredentials
 
-  await server.register([
+  let credentialPlugins = [cognitoFederatedCredentials]
+
+  if (useOidcMocks) {
+    credentialPlugins = [mockOidcProvider, mockCognitoFederatedCredentials]
+  }
+
+  const plugins = [
     requestLogger,
     requestTracing,
     secureContext,
     pulse,
     sessionCache,
-    credentialProvider,
+    ...credentialPlugins,
     federatedOidc,
     sessionCookie,
     nunjucksConfig,
     Scooter,
     contentSecurityPolicy,
     router // Register all the controllers/routes defined in src/server/router.js
-  ])
+  ]
+
+  await server.register(plugins)
 
   server.ext('onPreResponse', catchAll)
 

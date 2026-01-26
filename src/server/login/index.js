@@ -7,7 +7,7 @@ const login = {
       server.route([
         {
           method: 'GET',
-          path: '/login',
+          path: '/auth/login',
           ...loginController
         }
       ])

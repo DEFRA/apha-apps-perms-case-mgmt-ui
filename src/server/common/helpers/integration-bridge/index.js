@@ -1,5 +1,8 @@
 import { config } from '../../../../config/config.js'
-import { IntegrationBridgeClient } from './client.js'
+import {
+  IntegrationBridgeClient,
+  IntegrationBridgeConfigurationError
+} from './client.js'
 
 function buildIntegrationBridgeClient() {
   return new IntegrationBridgeClient({
@@ -10,4 +13,25 @@ function buildIntegrationBridgeClient() {
   })
 }
 
-export const integrationClient = buildIntegrationBridgeClient()
+function createIntegrationClient() {
+  try {
+    return buildIntegrationBridgeClient()
+  } catch (error) {
+    // In tests we don't always configure the Integration Bridge; return a stub that will
+    // still surface the configuration error if the client is used.
+    if (
+      process.env.NODE_ENV === 'test' &&
+      error instanceof IntegrationBridgeConfigurationError
+    ) {
+      return {
+        findCaseManagementUser() {
+          throw error
+        }
+      }
+    }
+    throw error
+  }
+}
+
+export const integrationClient = createIntegrationClient()
+export { buildIntegrationBridgeClient }

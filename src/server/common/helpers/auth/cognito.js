@@ -58,6 +58,10 @@ export const cognitoFederatedCredentials = {
         )
       }
       const cognitoProvider = new CognitoFederatedCredentialProvider(poolId)
+
+      server.app = server.app ?? {}
+      server.app.federatedCredentials = cognitoProvider
+
       server.decorate('server', 'federatedCredentials', cognitoProvider)
     }
   }

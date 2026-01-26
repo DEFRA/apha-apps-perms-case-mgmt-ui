@@ -4,21 +4,22 @@ import { dropUserSession } from './drop-user-session.js'
 
 describe('dropUserSession', () => {
   test('returns early when no session id is available', async () => {
-    const server = { session: { drop: vi.fn() } }
+    const server = { app: { session: { drop: vi.fn() } } }
+    const request = { server, state: {} }
 
-    await dropUserSession.call({ server, state: {} })
+    await dropUserSession(request)
 
-    expect(server.session.drop).not.toHaveBeenCalled()
+    expect(server.app.session.drop).not.toHaveBeenCalled()
   })
 
   test('drops the session when an id is present', async () => {
     const drop = vi.fn()
-    const context = {
-      server: { session: { drop } },
+    const request = {
+      server: { app: { session: { drop } } },
       state: { userSessionCookie: { sessionId: 'abc' } }
     }
 
-    await dropUserSession.call(context)
+    await dropUserSession(request)
 
     expect(drop).toHaveBeenCalledWith('abc')
   })

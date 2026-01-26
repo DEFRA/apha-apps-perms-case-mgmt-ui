@@ -16,6 +16,7 @@ const authCallbackController = {
   },
   handler: async (request, h) => {
     const { auth, sessionCookie, yar, logger } = request
+
     if (auth.isAuthenticated) {
       await ensureCaseManagementUserExists(request)
 

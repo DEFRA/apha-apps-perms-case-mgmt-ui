@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { authCallbackController } from './controller.js'
+import { authCallbackController } from './callback.js'
 
 const { createUserSession, redirectWithRefresh } = vi.hoisted(() => ({
   createUserSession: vi.fn(),
@@ -121,5 +121,12 @@ describe('authCallbackController', () => {
       /Unable to verify your access/
     )
     expect(request.sessionCookie.set).not.toHaveBeenCalled()
+  })
+
+  test('failAction wraps unauthorized errors', () => {
+    const boom = authCallbackController.options.response.failAction()
+
+    expect(boom.output.statusCode).toBe(401)
+    expect(boom.message).toBe('Unauthorized')
   })
 })

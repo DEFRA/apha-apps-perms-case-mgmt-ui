@@ -1,5 +1,6 @@
 import jwt from '@hapi/jwt'
 import { addSeconds } from 'date-fns'
+import { dropUserSession } from './drop-user-session.js'
 
 /**
  * @typedef {object} UserSession
@@ -19,7 +20,8 @@ import { addSeconds } from 'date-fns'
  * @param {any} request
  */
 function removeAuthenticatedUser(request) {
-  request.dropUserSession()
+  dropUserSession(request)
+
   if (request.sessionCookie?.h) {
     request.sessionCookie.clear()
     request.sessionCookie.h.unstate('csrfToken')
@@ -52,7 +54,7 @@ async function createUserSession(request, sessionId) {
     expiresAt
   }
 
-  await request.server.session.set(sessionId, session)
+  await request.server.app.session.set(sessionId, session)
   return session
 }
 
@@ -110,7 +112,8 @@ async function refreshUserSession(request, refreshTokenResponse) {
     expiresIn: expiresInMilliSeconds,
     expiresAt
   }
-  await request.server.session.set(
+
+  await request.server.app.session.set(
     request.state.userSessionCookie.sessionId,
     session
   )
