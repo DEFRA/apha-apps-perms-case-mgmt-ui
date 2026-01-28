@@ -1,0 +1,270 @@
+import * as Hoek from '@hapi/hoek'
+import * as openid from 'openid-client'
+import Joi from 'joi'
+import Boom from '@hapi/boom'
+
+import { config } from '../../../../config/config.js'
+import { createLogger } from '../logging/logger.js'
+import { refreshTokenIfExpired } from './refresh-token.js'
+import { asExternalUrl } from '../url/url-helpers.js'
+
+const logger = createLogger()
+const callbackPath = '/auth/callback'
+export const referrerFlashKey = 'referrer'
+
+export const federatedOidc = {
+  name: 'federatedOidc',
+  dependencies: ['federated-credentials'],
+  register: function (server) {
+    const useMocks = config.get('azureFederatedCredentials.enableMocking')
+
+    let discoveryUri = config.get('oidcWellKnownConfigurationUrl')
+
+    if (useMocks) {
+      const azureTenantId = config.get('azureTenantId')
+
+      discoveryUri = `${config.get('appBaseUrl')}/oidc/${azureTenantId}/v2.0/.well-known/openid-configuration`
+    }
+
+    /** @type {{ discoveryUri: string, redirectUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, useMocks: boolean, execute: Array<(config?: any) => void> }} */
+    const options = {
+      discoveryUri,
+      redirectUri: config.get('appBaseUrl') + callbackPath,
+      clientId: config.get('azureClientId'),
+      scope: `openid profile email`,
+      tokenProvider: () => server.app.federatedCredentials.getToken(),
+      useMocks,
+      // Disable the HTTPS requirements when connecting to the mock.
+      // OpenId flags this as deprecated purely to warn that it's not for prod use.
+      execute: useMocks ? [openid.allowInsecureRequests] : [] // NOSONAR keep for local mock http support
+    }
+
+    server.app.refreshUserSession = (request, userSession) => {
+      return refreshTokenIfExpired(
+        (token) => refreshToken(options, token),
+        request,
+        userSession
+      )
+    }
+
+    server.auth.scheme('federated-oidc', scheme)
+    server.auth.strategy(
+      'azure-oidc',
+      'federated-oidc',
+      /** @type {any} */ (options)
+    )
+  }
+}
+
+function scheme(_server, options) {
+  const validatedOptions = Joi.attempt(options, optionsSchema)
+
+  return {
+    authenticate: async function (request, h) {
+      const federatedToken = await validatedOptions.tokenProvider()
+      const discoveryUrl = new URL(validatedOptions.discoveryUri)
+
+      const oidcConfig = await openid.discovery(
+        discoveryUrl,
+        validatedOptions.clientId,
+        {},
+        clientFederatedCredential(federatedToken),
+        options.execute ? { execute: options.execute } : {}
+      )
+
+      const isPreLogin = !request.query.code
+
+      if (isPreLogin) {
+        try {
+          // User has just started the login flow.
+          const redirectTo = await preLogin(
+            request,
+            oidcConfig,
+            validatedOptions
+          )
+          return h.redirect(redirectTo).takeover()
+        } catch (e) {
+          logger.error(e, 'PreLogin Federated login failed')
+          return Boom.unauthorized(e)
+        }
+      } else {
+        // User has logged in and been redirected back to the auth callback
+        try {
+          const credentials = await postLogin(
+            request,
+            oidcConfig,
+            validatedOptions
+          )
+          return h.authenticated({ credentials })
+        } catch (e) {
+          logger.error(e, 'Post Federated login failed')
+          return Boom.unauthorized(e)
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Redirects a user to the AAD login page.
+ */
+async function preLogin(request, oidcConfig, options) {
+  const codeVerifier = openid.randomPKCECodeVerifier()
+  const codeChallenge = await openid.calculatePKCECodeChallenge(codeVerifier)
+  let nonce
+
+  const parameters = {
+    redirect_uri: options.redirectUri,
+    scope: options.scope,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256'
+  }
+
+  if (!oidcConfig.serverMetadata().supportsPKCE()) {
+    logger.debug("server doesn't support PKCE")
+    nonce = openid.randomNonce()
+    parameters.nonce = nonce
+  }
+
+  request.yar.set(options.sessionName, {
+    codeVerifier,
+    nonce
+  })
+
+  const refererPath = getRefererAsRelativeURL(request?.info?.referrer, '/')
+
+  request.yar.flash(referrerFlashKey, refererPath)
+
+  return openid.buildAuthorizationUrl(oidcConfig, parameters)
+}
+
+/**
+ * Post-login, user has logged to AAD and has been redirected back to the auth callback.
+ * If the token is validated then the credentials are returned.
+ */
+async function postLogin(request, oidcConfig, options) {
+  const state = request.yar.get(options.sessionName, true)
+  let codeVerifier = state?.codeVerifier
+  const nonce = state?.nonce
+
+  // In mock mode, be tolerant of missing PKCE/nonce to keep local dev simple.
+  if (!codeVerifier && options.useMocks) {
+    codeVerifier = 'mock-code-verifier'
+  }
+
+  // These values are set in the first part, if they're missing its probably because
+  // they've gone directly to the redirect link or refreshed it etc.
+  Hoek.assert(
+    codeVerifier || nonce,
+    'No verifier set in session, try logging in again.'
+  )
+
+  // `currentUrl` must match the full external url, including hostname.
+  const currentUrl = asExternalUrl(request.url, config.get('appBaseUrl'))
+
+  logger.info('validating token')
+  const token = await openid.authorizationCodeGrant(oidcConfig, currentUrl, {
+    pkceCodeVerifier: codeVerifier,
+    expectedNonce: nonce,
+    idTokenExpected: true
+  })
+
+  Hoek.assert(token, 'Failed to validate token')
+
+  const expiresIn = token.expiresIn()
+  const claims = /** @type {any} */ (token.claims?.() ?? {})
+  return {
+    expiresIn,
+    token: token.access_token,
+    refreshToken: token.refresh_token,
+    idToken: token.id_token,
+    claims,
+    profile: {
+      id: claims.oid ?? '',
+      displayName: claims.name ?? '',
+      email: claims.email ?? claims.preferred_username ?? '',
+      loginHint: claims.login_hint
+    }
+  }
+}
+
+/**
+ * Refreshes the client credentials using a refresh token.
+ * @param {{discoveryUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, execute: [() => void]}} options
+ * @param {string} jwtRefreshToken
+ * @returns {Promise<{}>}
+ */
+/**
+ * @param {{ discoveryUri: string, clientId: string, scope: string, tokenProvider: () => Promise<string>, execute: Array<(config?: any) => void> }} options
+ * @param {string | undefined} jwtRefreshToken
+ */
+export async function refreshToken(options, jwtRefreshToken) {
+  const discoveryUrl = new URL(options.discoveryUri)
+  const federatedToken = await options.tokenProvider()
+
+  const oidcConfig = await openid.discovery(
+    discoveryUrl,
+    options.clientId,
+    {},
+    clientFederatedCredential(federatedToken),
+    options.execute ? { execute: options.execute } : {}
+  )
+
+  return openid.refreshTokenGrant(oidcConfig, jwtRefreshToken ?? '', {
+    scope: options.scope
+  })
+}
+
+const optionsSchema = Joi.object({
+  discoveryUri: Joi.string().uri().required(),
+  redirectUri: Joi.string().uri().required(),
+  clientId: Joi.string().required(),
+  sessionName: Joi.string().default('oidc-auth'),
+  scope: Joi.string().required(),
+  tokenProvider: Joi.function().required(),
+  useMocks: Joi.boolean().default(false),
+  execute: Joi.array().default([])
+})
+
+/**
+ * Implements openid-client's ClientAuth interface.
+ * Takes a pre-existing JWT token and passes it in the`client_assertion` field instead of
+ * the `client_secret` field.
+ * @param {string} assertion
+ * @returns ClientAuth
+ */
+function clientFederatedCredential(assertion) {
+  return (_as, client, body) => {
+    body.set('client_id', client.client_id)
+    body.set(
+      'client_assertion_type',
+      'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+    )
+    body.set('client_assertion', assertion)
+  }
+}
+
+function getRefererAsRelativeURL(referer, defaultPath) {
+  let relative = defaultPath
+  if (referer) {
+    try {
+      const url = new URL(referer)
+      relative = url.pathname + url.search
+    } catch {
+      if (referer.startsWith('/')) {
+        relative = referer
+      }
+    }
+  }
+
+  // Don't redirect back to the auth callback page as the content can only be processed once.
+  if (relative.startsWith(callbackPath)) {
+    relative = defaultPath
+  }
+
+  return relative
+}
+
+/**
+ * @typedef {import('openid-client').ClientAuth}
+ */

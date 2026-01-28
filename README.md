@@ -101,6 +101,31 @@ Install application dependencies:
 npm install
 ```
 
+### Authentication (Azure AD)
+
+- All application routes require an authenticated Azure AD session (health and static assets remain open); start the sign-in flow at `/auth/login` and end it at `/auth/logout`.
+- Local development defaults to mocked federated credentials by leaving `AZURE_CREDENTIALS_ENABLE_MOCKING=true`, using the stub well-known endpoint and HTTP.
+- Optional: override the Cognito developer provider name via `AZURE_CREDENTIAL_PROVIDER_NAME` (default: `apha-apps-perms-case-mgmt-ui-aad-access`).
+- Example `.env` (mocked, default):
+  ```
+  APP_BASE_URL=http://localhost:3000
+  AZURE_CREDENTIALS_ENABLE_MOCKING=true
+  OIDC_WELL_KNOWN_CONFIGURATION_URL=http://localhost:3939/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration
+  AZURE_TENANT_ID=6f504113-6b64-43f2-ade9-242e05780007
+  AZURE_CLIENT_ID=26372ac9-d8f0-4da9-a17e-938eb3161d8e
+  ```
+- Example `.env` (real Azure):
+  ```
+  APP_BASE_URL=http://localhost:3000
+  AZURE_CREDENTIALS_ENABLE_MOCKING=false
+  AZURE_IDENTITY_POOL_ID=<cognito-identity-pool-id>
+  AZURE_CREDENTIAL_PROVIDER_NAME=apha-apps-perms-case-mgmt-ui-aad-access
+  AZURE_TENANT_ID=<tenant-id>
+  AZURE_CLIENT_ID=<client-id>
+  OIDC_WELL_KNOWN_CONFIGURATION_URL=https://login.microsoftonline.com/<tenant-id>/v2.0/.well-known/openid-configuration
+  SESSION_COOKIE_PASSWORD=please-change-me-to-a-32-characters-secret
+  ```
+
 ### Development
 
 To run the application in `development` mode run:

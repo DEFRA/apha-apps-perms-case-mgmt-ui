@@ -15,7 +15,16 @@ describe('#contentSecurityPolicy', () => {
   test('Should set the CSP policy header', async () => {
     const resp = await server.inject({
       method: 'GET',
-      url: '/'
+      url: '/',
+      auth: {
+        strategy: 'session',
+        credentials: {
+          id: 'test-user',
+          email: 'user@example.com',
+          displayName: 'Test User',
+          isAuthenticated: true
+        }
+      }
     })
 
     expect(resp.headers['content-security-policy']).toBeDefined()

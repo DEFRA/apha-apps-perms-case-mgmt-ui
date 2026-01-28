@@ -16,7 +16,16 @@ describe('#homeController', () => {
   test('Should provide expected response', async () => {
     const { result, statusCode } = await server.inject({
       method: 'GET',
-      url: '/'
+      url: '/',
+      auth: {
+        strategy: 'session',
+        credentials: {
+          id: 'test-user',
+          email: 'user@example.com',
+          displayName: 'Test User',
+          isAuthenticated: true
+        }
+      }
     })
 
     expect(result).toEqual(expect.stringContaining('Case Management Tool'))
