@@ -145,6 +145,56 @@ export const config = convict({
     env: 'AZURE_CLIENT_ID',
     default: '26372ac9-d8f0-4da9-a17e-938eb3161d8e'
   },
+  azureClientSecret: {
+    doc: 'Azure App Client Secret. Defaults to stub secret',
+    format: String,
+    sensitive: true,
+    env: 'AZURE_CLIENT_SECRET',
+    default: 'test_value'
+  },
+  integrationBridge: {
+    enableMocking: {
+      doc: 'Use the mock Integration Bridge client (intended for development/test)',
+      format: Boolean,
+      default: !isProduction,
+      env: 'APHA_INTEGRATION_BRIDGE_ENABLE_MOCKING'
+    },
+    mockAllowlist: {
+      doc: 'Comma separated list of email addresses allowed through the mock Integration Bridge',
+      format: String,
+      default: '',
+      env: 'APHA_INTEGRATION_BRIDGE_MOCK_ALLOWLIST'
+    },
+    baseUrl: {
+      doc: 'Base URL for the APHA Integration Bridge service',
+      format: 'url',
+      env: 'APHA_INTEGRATION_BRIDGE_BASE_URL',
+      nullable: true,
+      default: null
+    },
+    tokenUrl: {
+      doc: 'Cognito OAuth token endpoint for the APHA Integration Bridge',
+      format: 'url',
+      env: 'APHA_INTEGRATION_BRIDGE_TOKEN_URL',
+      nullable: true,
+      default: null
+    },
+    clientId: {
+      doc: 'Client ID to authenticate with the APHA Integration Bridge',
+      format: String,
+      env: 'APHA_INTEGRATION_BRIDGE_CLIENT_ID',
+      nullable: true,
+      default: null
+    },
+    clientSecret: {
+      doc: 'Client secret to authenticate with the APHA Integration Bridge',
+      format: String,
+      env: 'APHA_INTEGRATION_BRIDGE_CLIENT_SECRET',
+      nullable: true,
+      sensitive: true,
+      default: null
+    }
+  },
   get oidcWellKnownConfigurationUrl() {
     return {
       doc: 'OIDC .well-known configuration URL. Defaults to the stub',
