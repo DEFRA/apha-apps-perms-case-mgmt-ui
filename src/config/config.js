@@ -176,7 +176,8 @@ export const config = convict({
       doc: 'Cognito OAuth token endpoint for the APHA Integration Bridge',
       format: 'url',
       env: 'APHA_INTEGRATION_BRIDGE_TOKEN_URL',
-      default: 'http://localhost:5676/oauth2/token'
+      default:
+        'https://apha-integration-bridge-c63f2.auth.eu-west-2.amazoncognito.com/oauth2/token'
     },
     clientId: {
       doc: 'Client ID to authenticate with the APHA Integration Bridge',
