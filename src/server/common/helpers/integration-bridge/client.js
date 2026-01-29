@@ -90,7 +90,14 @@ class IntegrationBridgeClient {
     )
   }
 
-  async postJson(path, body, schema, contextLabel) {
+  /**
+   * @param {string} path
+   * @param {any} body
+   * @param {import('joi').Schema | null} schema
+   * @param {string} [contextLabel]
+   * @param {string} [forwardedUserToken] - Optional user access token to forward to downstream services
+   */
+  async postJson(path, body, schema, contextLabel, forwardedUserToken) {
     if (!this.baseUrl) {
       throw new IntegrationBridgeConfigurationError(
         'APHA_INTEGRATION_BRIDGE_BASE_URL must be configured'
@@ -101,12 +108,18 @@ class IntegrationBridgeClient {
 
     const url = new URL(path, this.baseUrl)
 
+    const forwardedAuthorization =
+      this.formatForwardedAuthorization(forwardedUserToken)
+
     const response = await this.safeFetch(url, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
+        ...(forwardedAuthorization
+          ? { 'X-Forwarded-Authorization': forwardedAuthorization }
+          : {})
       },
       body: JSON.stringify(body)
     })
@@ -250,6 +263,28 @@ class IntegrationBridgeClient {
     } catch {
       return text
     }
+  }
+
+  /**
+   * Normalises an access token so it is safe to forward downstream.
+   * Returns null when no token is provided.
+   * @param {string} [forwardedUserToken]
+   * @returns {string | null}
+   */
+  formatForwardedAuthorization(forwardedUserToken) {
+    if (typeof forwardedUserToken !== 'string') {
+      return null
+    }
+
+    const trimmedToken = forwardedUserToken.trim()
+
+    if (!trimmedToken) {
+      return null
+    }
+
+    return trimmedToken.startsWith('Bearer ')
+      ? trimmedToken
+      : `Bearer ${trimmedToken}`
   }
 }
 

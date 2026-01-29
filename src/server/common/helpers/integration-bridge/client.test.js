@@ -164,4 +164,64 @@ describe('IntegrationBridgeClient', () => {
       client.findCaseManagementUser('user@example.com')
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
   })
+
+  test('forwards the user access token via X-Forwarded-Authorization when provided', async () => {
+    let forwardedHeader
+
+    server.use(
+      http.post(tokenUrl, () => HttpResponse.json(tokenResponse)),
+      http.post(`${baseUrl}/example`, async ({ request }) => {
+        forwardedHeader = request.headers.get('x-forwarded-authorization')
+        return HttpResponse.json({ ok: true })
+      })
+    )
+
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret'
+    })
+
+    await client.postJson(
+      '/example',
+      { foo: 'bar' },
+      null,
+      'example',
+      'user-token-456'
+    )
+
+    expect(forwardedHeader).toBe('Bearer user-token-456')
+  })
+
+  test('does not add forwarded auth header when token is missing or blank', async () => {
+    let forwardedHeader
+
+    server.use(
+      http.post(tokenUrl, () => HttpResponse.json(tokenResponse)),
+      http.post(`${baseUrl}/no-forward`, async ({ request }) => {
+        forwardedHeader = request.headers.get('x-forwarded-authorization')
+        return HttpResponse.json({ ok: true })
+      })
+    )
+
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret'
+    })
+
+    await client.postJson('/no-forward', { foo: 'bar' }, null, 'no-forward')
+    expect(forwardedHeader).toBeNull()
+
+    await client.postJson(
+      '/no-forward',
+      { foo: 'bar' },
+      null,
+      'no-forward',
+      '   '
+    )
+    expect(forwardedHeader).toBeNull()
+  })
 })
