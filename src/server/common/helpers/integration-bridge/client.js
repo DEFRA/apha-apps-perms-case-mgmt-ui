@@ -98,12 +98,6 @@ class IntegrationBridgeClient {
    * @param {string} [forwardedUserToken] - Optional user access token to forward to downstream services
    */
   async postJson(path, body, schema, contextLabel, forwardedUserToken) {
-    if (!this.baseUrl) {
-      throw new IntegrationBridgeConfigurationError(
-        'APHA_INTEGRATION_BRIDGE_BASE_URL must be configured'
-      )
-    }
-
     const token = await this.getAccessToken()
 
     const url = new URL(path, this.baseUrl)
@@ -111,16 +105,19 @@ class IntegrationBridgeClient {
     const forwardedAuthorization =
       this.formatForwardedAuthorization(forwardedUserToken)
 
+    const headers = new Headers({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    })
+
+    if (forwardedAuthorization) {
+      headers.append('X-Forwarded-Authorization', forwardedAuthorization)
+    }
+
     const response = await this.safeFetch(url, {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(forwardedAuthorization
-          ? { 'X-Forwarded-Authorization': forwardedAuthorization }
-          : {})
-      },
+      headers,
       body: JSON.stringify(body)
     })
 
@@ -141,12 +138,6 @@ class IntegrationBridgeClient {
   }
 
   async getAccessToken() {
-    if (!this.tokenUrl || !this.clientId || !this.clientSecret) {
-      throw new IntegrationBridgeConfigurationError(
-        'APHA Integration Bridge credentials are not configured'
-      )
-    }
-
     if (this.accessToken && this.tokenIsValid()) {
       return this.accessToken
     }
