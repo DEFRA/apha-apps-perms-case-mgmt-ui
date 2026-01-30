@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
+      COMPOSE_PROFILE: '*'
     strategy:
       matrix:
         test-suite:
@@ -63,9 +64,6 @@ jobs:
           token-url: ${{ secrets.APHA_INTEGRATION_BRIDGE_TOKEN_URL }}
           client-id: ${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_ID }}
           client-secret: ${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_SECRET }}
-
-      - name: Configure APHA Integration Bridge
-        uses: ./.github/actions/configure-apha-integration-bridge
 
       - name: Configure OracleDB
         uses: ./.github/actions/configure-oracledb

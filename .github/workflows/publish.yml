@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
+      COMPOSE_PROFILE: '*'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
