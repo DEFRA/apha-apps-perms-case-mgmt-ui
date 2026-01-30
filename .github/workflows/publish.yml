@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
+      COMPOSE_PROFILES: '*'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -35,7 +36,8 @@ jobs:
           ref: main
           path: apha-integration-bridge
 
-      - uses: ./.github/actions/configure-oracledb
+      - name: Configure OracleDB
+        uses: ./.github/actions/configure-oracledb
         with:
           username: ${{ secrets.ORACLE_USERNAME }}
           password: ${{ secrets.ORACLE_SECRET_KEY }}
