@@ -24,17 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
-      COMPOSE_PROFILES: '*'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Check out APHA Integration Bridge
-        uses: actions/checkout@v5
+      - name: Configure APHA Integration Bridge
+        uses: ./.github/actions/configure-apha-integration-bridge
         with:
-          repository: DEFRA/apha-integration-bridge
-          ref: main
-          path: apha-integration-bridge
+          token-url: ${{ secrets.APHA_INTEGRATION_BRIDGE_TOKEN_URL }}
+          client-id: ${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_ID }}
+          client-secret: ${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_SECRET }}
 
       - name: Configure OracleDB
         uses: ./.github/actions/configure-oracledb

@@ -1,0 +1,32 @@
+name: 'Configure APHA Integration Bridge'
+description: 'Configures the APHA Integration Bridge environment for GitHub Actions'
+inputs:
+  token-url:
+    required: true
+  client-id:
+    required: true
+  client-secret:
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Check out APHA Integration Bridge
+      uses: actions/checkout@v5
+      with:
+        repository: DEFRA/apha-integration-bridge
+        ref: main
+        path: apha-integration-bridge
+
+    - name: Create necessary .env file in project root
+      shell: bash
+      run: |
+        echo "COMPOSE_PROFILES='*'" >> .env"
+      run: |
+        echo "$ENV_FILE" >> .env
+      env:
+        ENV_FILE: |
+          COMPOSE_PROFILE=*
+          APHA_INTEGRATION_BRIDGE_BASE_URL=http://localhost:5676
+          APHA_INTEGRATION_BRIDGE_TOKEN_URL=${{ inputs.token-url }}
+          APHA_INTEGRATION_BRIDGE_CLIENT_ID=${{ inputs.client-id }}
+          APHA_INTEGRATION_BRIDGE_CLIENT_SECRET=${{ inputs.client-secret }}
