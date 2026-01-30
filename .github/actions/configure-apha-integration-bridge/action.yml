@@ -20,8 +20,6 @@ runs:
     - name: Create necessary .env file in project root
       shell: bash
       run: |
-        echo "COMPOSE_PROFILES='*'" >> .env"
-      run: |
         echo "$ENV_FILE" >> .env
       env:
         ENV_FILE: |
