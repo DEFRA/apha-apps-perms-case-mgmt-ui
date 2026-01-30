@@ -10,6 +10,7 @@ runs:
   steps:
     - name: Install Oracle Instant Client
       id: oracle
+      shell: bash
       run: ./.github/actions/configure-oracledb/oracle-instant-client.sh
 
     - name: Login to oracle container registry
