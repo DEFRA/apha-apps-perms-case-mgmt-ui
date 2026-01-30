@@ -62,7 +62,7 @@ jobs:
 
       - name: Start docker compose
         run: |
-          docker compose up --wait-timeout 300 -d --quiet-pull
+          docker compose --profile=all up --wait-timeout 300 -d --quiet-pull
 
       - name: Journey tests
         run: |
