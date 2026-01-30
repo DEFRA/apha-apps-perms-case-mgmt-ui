@@ -12,7 +12,7 @@ permissions:
 
 env:
   AWS_REGION: eu-west-2
-  AWS_ACCOUNT_ID: "094954420758"
+  AWS_ACCOUNT_ID: '094954420758'
 
 concurrency:
   group: publish-main
@@ -22,9 +22,23 @@ jobs:
     if: github.run_number != 1
     name: CDP-build-workflow
     runs-on: ubuntu-latest
+    env:
+      APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Check out APHA Integration Bridge
+        uses: actions/checkout@v5
+        with:
+          repository: DEFRA/apha-integration-bridge
+          ref: main
+          path: apha-integration-bridge
+
+      - uses: ./.github/actions/configure-oracledb
+        with:
+          username: ${{ secrets.ORACLE_USERNAME }}
+          password: ${{ secrets.ORACLE_SECRET_KEY }}
 
       - name: Create Test Coverage Reports
         uses: actions/setup-node@v4

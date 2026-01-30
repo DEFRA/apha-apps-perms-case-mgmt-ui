@@ -47,6 +47,8 @@ jobs:
   pr-validator:
     name: Run Journey Tests
     runs-on: ubuntu-latest
+    env:
+      APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
     strategy:
       matrix:
         test-suite:
@@ -54,6 +56,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Checkout APHA Integration Bridge
+        uses: actions/checkout@v5
+        with:
+          repository: DEFRA/apha-integration-bridge
+          ref: main
+          path: apha-integration-bridge
+
+      - uses: ./.github/actions/configure-oracledb
+        with:
+          username: ${{ secrets.ORACLE_USERNAME }}
+          password: ${{ secrets.ORACLE_SECRET_KEY }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
