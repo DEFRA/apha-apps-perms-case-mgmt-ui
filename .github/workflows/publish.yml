@@ -12,7 +12,7 @@ permissions:
 
 env:
   AWS_REGION: eu-west-2
-  AWS_ACCOUNT_ID: "094954420758"
+  AWS_ACCOUNT_ID: '094954420758'
 
 concurrency:
   group: publish-main
@@ -22,9 +22,39 @@ jobs:
     if: github.run_number != 1
     name: CDP-build-workflow
     runs-on: ubuntu-latest
+    env:
+      APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Configure APHA Integration Bridge
+        uses: ./.github/actions/configure-apha-integration-bridge
+        with:
+          salesforce-base-url: ${{ secrets.APHA_INTEGRATION_BRIDGE_SALESFORCE_BASE_URL }}
+          salesforce-client-id: ${{ secrets.APHA_INTEGRATION_BRIDGE_SALESFORCE_CLIENT_ID }}
+          salesforce-client-secret: ${{ secrets.APHA_INTEGRATION_BRIDGE_SALESFORCE_CLIENT_SECRET }}
+
+      - name: Configure OracleDB
+        uses: ./.github/actions/configure-oracledb
+        with:
+          username: ${{ secrets.ORACLE_USERNAME }}
+          password: ${{ secrets.ORACLE_SECRET_KEY }}
+
+      - name: Configure MGMT UI .env file
+        shell: bash
+        run: |
+          echo "$ENV_FILE" >> .env
+        env:
+          ENV_FILE: |
+            APP_BASE_URL=http://localhost:3000
+            AZURE_CREDENTIALS_ENABLE_MOCKING=true
+            OIDC_WELL_KNOWN_CONFIGURATION_URL=http://localhost:3939/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration
+            AZURE_TENANT_ID=6f504113-6b64-43f2-ade9-242e05780007
+            AZURE_CLIENT_ID=26372ac9-d8f0-4da9-a17e-938eb3161d8e
+            APHA_INTEGRATION_BRIDGE_TOKEN_URL=${{ secrets.APHA_INTEGRATION_BRIDGE_TOKEN_URL }}
+            APHA_INTEGRATION_BRIDGE_CLIENT_ID=${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_ID }}
+            APHA_INTEGRATION_BRIDGE_CLIENT_SECRET=${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_SECRET }}
 
       - name: Create Test Coverage Reports
         uses: actions/setup-node@v4
@@ -46,7 +76,7 @@ jobs:
 
       - name: Start docker compose
         run: |
-          docker compose up --wait-timeout 300 -d --quiet-pull
+          docker compose --profile=all --profile=self up --wait-timeout 300 -d --quiet-pull
 
       - name: Journey tests
         run: |

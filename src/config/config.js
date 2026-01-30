@@ -9,11 +9,31 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const fourHoursMs = 14400000
 const oneWeekMs = 604800000
 
+const defaultAzureTenantId = '6f504113-6b64-43f2-ade9-242e05780007'
+
 const isProduction = process.env.NODE_ENV === 'production'
+
 const isTest = process.env.NODE_ENV === 'test'
+
 const isDevelopment = process.env.NODE_ENV === 'development'
 
 convict.addFormats(convictFormatWithValidator)
+
+convict.addFormat({
+  name: 'url',
+  validate: (value) => {
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error('must be a non-empty URL')
+    }
+
+    try {
+      // eslint-disable-next-line no-new
+      new URL(value)
+    } catch {
+      throw new Error('must be a valid URL')
+    }
+  }
+})
 
 export const config = convict({
   serviceVersion: {
@@ -137,7 +157,7 @@ export const config = convict({
     doc: 'Azure Active Directory Tenant ID',
     format: String,
     env: 'AZURE_TENANT_ID',
-    default: '6f504113-6b64-43f2-ade9-242e05780007'
+    default: defaultAzureTenantId
   },
   azureClientId: {
     doc: 'Azure App Client ID',
@@ -145,13 +165,39 @@ export const config = convict({
     env: 'AZURE_CLIENT_ID',
     default: '26372ac9-d8f0-4da9-a17e-938eb3161d8e'
   },
-  get oidcWellKnownConfigurationUrl() {
-    return {
-      doc: 'OIDC .well-known configuration URL. Defaults to the stub',
+  integrationBridge: {
+    baseUrl: {
+      doc: 'Base URL for the APHA Integration Bridge service',
+      format: 'url',
+      env: 'APHA_INTEGRATION_BRIDGE_BASE_URL',
+      default: 'http://localhost:5676'
+    },
+    tokenUrl: {
+      doc: 'Cognito OAuth token endpoint for the APHA Integration Bridge',
+      format: 'url',
+      env: 'APHA_INTEGRATION_BRIDGE_TOKEN_URL',
+      default:
+        'https://apha-integration-bridge-c63f2.auth.eu-west-2.amazoncognito.com/oauth2/token'
+    },
+    clientId: {
+      doc: 'Client ID to authenticate with the APHA Integration Bridge',
       format: String,
-      env: 'OIDC_WELL_KNOWN_CONFIGURATION_URL',
-      default: `http://localhost:3939/${this.azureTenantId.default}/v2.0/.well-known/openid-configuration`
+      env: 'APHA_INTEGRATION_BRIDGE_CLIENT_ID',
+      default: 'integration-bridge-client-id'
+    },
+    clientSecret: {
+      doc: 'Client secret to authenticate with the APHA Integration Bridge',
+      format: String,
+      env: 'APHA_INTEGRATION_BRIDGE_CLIENT_SECRET',
+      sensitive: true,
+      default: 'integration-bridge-client-secret'
     }
+  },
+  oidcWellKnownConfigurationUrl: {
+    doc: 'OIDC .well-known configuration URL. Defaults to the stub',
+    format: String,
+    env: 'OIDC_WELL_KNOWN_CONFIGURATION_URL',
+    default: `http://localhost:3939/${process.env.AZURE_TENANT_ID ?? defaultAzureTenantId}/v2.0/.well-known/openid-configuration`
   },
   isSecureContextEnabled: {
     doc: 'Enable Secure Context',

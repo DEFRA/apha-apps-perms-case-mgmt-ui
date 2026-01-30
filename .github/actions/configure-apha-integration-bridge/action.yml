@@ -1,0 +1,29 @@
+name: 'Configure APHA Integration Bridge'
+description: 'Configures the APHA Integration Bridge environment for GitHub Actions'
+inputs:
+  salesforce-base-url:
+    required: true
+  salesforce-client-id:
+    required: true
+  salesforce-client-secret:
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Check out APHA Integration Bridge
+      uses: actions/checkout@v5
+      with:
+        repository: DEFRA/apha-integration-bridge
+        ref: main
+        path: apha-integration-bridge
+
+    - name: Create necessary .env file in project root
+      shell: bash
+      run: |
+        echo "$ENV_FILE" >> .env
+      env:
+        ENV_FILE: |
+          COMPOSE_PROFILE=*
+          SALESFORCE_BASE_URL=${{ inputs.salesforce-base-url }}
+          SALESFORCE_CLIENT_ID=${{ inputs.salesforce-client-id }}
+          SALESFORCE_CLIENT_SECRET=${{ inputs.salesforce-client-secret }}
