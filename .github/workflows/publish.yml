@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
-      COMPOSE_PROFILE: '*'
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -53,6 +52,12 @@ jobs:
           npm run format:check
           npm run lint
           npm run test
+        env:
+          APP_BASE_URL: http://localhost:3000
+          AZURE_CREDENTIALS_ENABLE_MOCKING: 'true'
+          OIDC_WELL_KNOWN_CONFIGURATION_URL: http://localhost:3939/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration
+          AZURE_TENANT_ID: 6f504113-6b64-43f2-ade9-242e05780007
+          AZURE_CLIENT_ID: 26372ac9-d8f0-4da9-a17e-938eb3161d8e
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@master
