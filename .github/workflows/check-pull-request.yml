@@ -83,7 +83,7 @@ jobs:
           npm run build:frontend
 
       - name: Start docker compose
-        run: docker compose --profile=all up --wait-timeout 300 -d --quiet-pull
+        run: docker compose --profile=all --profile=self up --wait-timeout 300 -d --quiet-pull
 
       - name: Run ${{ matrix.test-suite }}
         run: npm run ${{ matrix.test-suite }}

@@ -49,28 +49,30 @@ services:
 
   ################################################################################
 
-  # your-frontend:
-  #   build: ./
-  #   ports:
-  #     - '3000:3000'
-  #   links:
-  #     - 'localstack:localstack'
-  #     - 'redis:redis'
-  #   depends_on:
-  #     localstack:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #   env_file:
-  #     - 'compose/aws.env'
-  #   environment:
-  #     PORT: 3000
-  #     NODE_ENV: development
-  #     REDIS_HOST: redis
-  #     LOCALSTACK_ENDPOINT: http://localstack:4566
-  #     USE_SINGLE_INSTANCE_CACHE: true
-  #   networks:
-  #     - cdp-tenant
+  apha-apps-perms-case-mgmt-ui:
+    build: ./
+    profiles:
+      - self
+    ports:
+      - '3000:3000'
+    links:
+      # - 'localstack:localstack'
+      - 'redis:redis'
+    depends_on:
+      # localstack:
+      #   condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - '.env'
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      REDIS_HOST: redis
+      # LOCALSTACK_ENDPOINT: http://localstack:4566
+      USE_SINGLE_INSTANCE_CACHE: true
+    networks:
+      - cdp-tenant
 
   # your-backend:
   #   image: defradigital/your-backend:${YOUR_BACKEND_VERSION:-latest}
