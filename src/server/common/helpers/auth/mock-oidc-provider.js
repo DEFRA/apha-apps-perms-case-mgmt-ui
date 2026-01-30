@@ -128,7 +128,7 @@ const mockOidcProvider = {
           const payload = {
             oid: 'mock-user',
             sub: 'mock-user',
-            preferred_username: 'mock.user@example.com',
+            preferred_username: 'aphadev.mehboob.alam@defra.gov.uk',
             name: 'Mock User',
             login_hint: 'mock',
             aud: clientId,
