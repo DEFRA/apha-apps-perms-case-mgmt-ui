@@ -1,4 +1,12 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest'
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  test,
+  vi
+} from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
@@ -7,6 +15,8 @@ import {
   IntegrationBridgeConfigurationError,
   IntegrationBridgeRequestError
 } from './client.js'
+
+const { Response } = globalThis
 
 const baseUrl = 'https://bridge.example'
 
@@ -91,6 +101,56 @@ describe('IntegrationBridgeClient', () => {
 
     expect(tokenCalls).toBe(1)
     expect(findCalls).toBe(2)
+  })
+
+  test('refreshes an expired token only once when concurrent requests happen', async () => {
+    vi.useFakeTimers()
+    let tokenCalls = 0
+    const authHeaders = []
+
+    server.use(
+      http.post(tokenUrl, () => {
+        tokenCalls += 1
+        return HttpResponse.json({
+          access_token: `token-${tokenCalls}`,
+          expires_in: tokenCalls === 1 ? 1 : 3600
+        })
+      }),
+      http.post(`${baseUrl}/foo`, ({ request }) => {
+        authHeaders.push(request.headers.get('authorization'))
+        return HttpResponse.json({ ok: true })
+      }),
+      http.post(`${baseUrl}/bar`, ({ request }) => {
+        authHeaders.push(request.headers.get('authorization'))
+        return HttpResponse.json({ ok: true })
+      })
+    )
+
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      tokenBufferSeconds: 0
+    })
+
+    // Seed an expired token to force a refresh
+    client.authorization = Promise.resolve({
+      accessToken: 'stale-token',
+      expiresAt: new Date(Date.now() - 1000)
+    })
+
+    const requests = Promise.all([
+      client.postJson('/foo', {}, null, 'foo'),
+      client.postJson('/bar', {}, null, 'bar')
+    ])
+
+    vi.advanceTimersByTime(2000)
+    await requests
+
+    expect(tokenCalls).toBe(1)
+    expect(authHeaders).toEqual(['Bearer token-1', 'Bearer token-1'])
+    vi.useRealTimers()
   })
 
   test('throws a request error when the bridge responds with a non-200 status', async () => {
@@ -223,5 +283,63 @@ describe('IntegrationBridgeClient', () => {
       '   '
     )
     expect(forwardedHeader).toBeNull()
+  })
+
+  test('normalises forwarded tokens that already include the Bearer prefix', () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret'
+    })
+
+    expect(client.formatForwardedAuthorization('  Bearer xyz  ')).toBe(
+      'Bearer xyz'
+    )
+    expect(client.formatForwardedAuthorization('abc123')).toBe('Bearer abc123')
+  })
+
+  test('wraps fetch errors with IntegrationBridgeRequestError', async () => {
+    const failingFetch = vi.fn().mockRejectedValue(new Error('network down'))
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      fetchImpl: failingFetch
+    })
+
+    await expect(client.safeFetch('http://example.com', {})).rejects.toThrow(
+      'Failed to communicate with the APHA Integration Bridge'
+    )
+  })
+
+  test('parses payloads defensively', async () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret'
+    })
+
+    const empty = await client.readPayload(new Response(''))
+    expect(empty).toBeNull()
+
+    const text = await client.readPayload(new Response('not-json'))
+    expect(text).toBe('not-json')
+  })
+
+  test('calculateExpiry returns immediate expiry when expiresIn is invalid', () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret'
+    })
+
+    const now = Date.now()
+    const expires = client.calculateExpiry(undefined)
+
+    expect(expires.getTime()).toBeGreaterThanOrEqual(now)
   })
 })

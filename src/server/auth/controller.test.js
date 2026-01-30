@@ -123,6 +123,19 @@ describe('authCallbackController', () => {
     expect(request.sessionCookie.set).not.toHaveBeenCalled()
   })
 
+  test('rejects when email is missing from the authentication token', async () => {
+    const request = buildRequest()
+    // @ts-expect-error intentionally clearing email for test coverage
+    request.auth.credentials.profile.email = undefined
+    const h = {}
+
+    await expect(authCallbackController.handler(request, h)).rejects.toThrow(
+      /Email address missing/
+    )
+    expect(integrationClient.findCaseManagementUser).not.toHaveBeenCalled()
+    expect(request.sessionCookie.set).not.toHaveBeenCalled()
+  })
+
   test('failAction wraps unauthorized errors', () => {
     const boom = authCallbackController.options.response.failAction()
 
