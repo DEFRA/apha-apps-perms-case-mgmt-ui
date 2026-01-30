@@ -50,7 +50,9 @@ services:
   ################################################################################
 
   apha-apps-perms-case-mgmt-ui:
-    build: ./
+    build:
+      context: .
+      target: development
     profiles:
       - self
     ports:

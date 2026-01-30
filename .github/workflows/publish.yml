@@ -41,6 +41,18 @@ jobs:
           username: ${{ secrets.ORACLE_USERNAME }}
           password: ${{ secrets.ORACLE_SECRET_KEY }}
 
+      - name: Configure MGMT UI .env file
+        shell: bash
+        run: |
+          echo "$ENV_FILE" >> .env
+        env:
+          ENV_FILE: |
+            APP_BASE_URL=http://localhost:3000
+            AZURE_CREDENTIALS_ENABLE_MOCKING=true
+            OIDC_WELL_KNOWN_CONFIGURATION_URL=http://localhost:3939/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration
+            AZURE_TENANT_ID=6f504113-6b64-43f2-ade9-242e05780007
+            AZURE_CLIENT_ID=26372ac9-d8f0-4da9-a17e-938eb3161d8e
+
       - name: Create Test Coverage Reports
         uses: actions/setup-node@v4
         with:
@@ -52,12 +64,6 @@ jobs:
           npm run format:check
           npm run lint
           npm run test
-        env:
-          APP_BASE_URL: http://localhost:3000
-          AZURE_CREDENTIALS_ENABLE_MOCKING: 'true'
-          OIDC_WELL_KNOWN_CONFIGURATION_URL: http://localhost:3939/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration
-          AZURE_TENANT_ID: 6f504113-6b64-43f2-ade9-242e05780007
-          AZURE_CLIENT_ID: 26372ac9-d8f0-4da9-a17e-938eb3161d8e
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@master
