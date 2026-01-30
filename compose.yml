@@ -73,6 +73,7 @@ services:
       REDIS_HOST: redis
       # LOCALSTACK_ENDPOINT: http://localstack:4566
       USE_SINGLE_INSTANCE_CACHE: true
+      APHA_INTEGRATION_BRIDGE_BASE_URL: http://apha-integration-bridge:5676
     networks:
       - cdp-tenant
 

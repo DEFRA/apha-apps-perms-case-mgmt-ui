@@ -1,11 +1,11 @@
 name: 'Configure APHA Integration Bridge'
 description: 'Configures the APHA Integration Bridge environment for GitHub Actions'
 inputs:
-  token-url:
+  salesforce-base-url:
     required: true
-  client-id:
+  salesforce-client-id:
     required: true
-  client-secret:
+  salesforce-client-secret:
     required: true
 runs:
   using: 'composite'
@@ -24,7 +24,6 @@ runs:
       env:
         ENV_FILE: |
           COMPOSE_PROFILE=*
-          APHA_INTEGRATION_BRIDGE_BASE_URL=http://localhost:5676
-          APHA_INTEGRATION_BRIDGE_TOKEN_URL=${{ inputs.token-url }}
-          APHA_INTEGRATION_BRIDGE_CLIENT_ID=${{ inputs.client-id }}
-          APHA_INTEGRATION_BRIDGE_CLIENT_SECRET=${{ inputs.client-secret }}
+          SALESFORCE_BASE_URL=${{ inputs.salesforce-base-url }}
+          SALESFORCE_CLIENT_ID=${{ inputs.salesforce-client-id }}
+          SALESFORCE_CLIENT_SECRET=${{ inputs.salesforce-client-secret }}
