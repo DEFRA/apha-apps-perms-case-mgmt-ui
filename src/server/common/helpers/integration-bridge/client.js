@@ -68,11 +68,11 @@ class IntegrationBridgeClient {
 
     this.tokenBufferSeconds = tokenBufferSeconds
 
-    this.accessToken = null
+    /** @type {Promise<{ accessToken: string, expiresAt: Date }> | null} */
+    this.authorization = null
 
-    this.accessTokenExpiresAt = null
-
-    this.pendingTokenPromise = null
+    /** @type {Promise<{ accessToken: string, expiresAt: Date }> | null} */
+    this.refreshPromise = null
   }
 
   async findCaseManagementUser(emailAddress) {
@@ -98,7 +98,7 @@ class IntegrationBridgeClient {
    * @param {string} [forwardedUserToken] - Optional user access token to forward to downstream services
    */
   async postJson(path, body, schema, contextLabel, forwardedUserToken) {
-    const token = await this.getAccessToken()
+    const { accessToken } = await this.getAuthorization()
 
     const url = new URL(path, this.baseUrl)
 
@@ -108,7 +108,7 @@ class IntegrationBridgeClient {
     const headers = new Headers({
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${accessToken}`
     })
 
     if (forwardedAuthorization) {
@@ -137,31 +137,60 @@ class IntegrationBridgeClient {
     return payload
   }
 
-  async getAccessToken() {
-    if (this.accessToken && this.tokenIsValid()) {
-      return this.accessToken
+  async getAuthorization() {
+    if (!this.authorization) {
+      this.authorization = this.createAuthorizationPromise().catch((error) => {
+        this.authorization = null
+
+        throw error
+      })
+
+      return this.authorization
     }
 
-    if (this.pendingTokenPromise) {
-      return this.pendingTokenPromise
+    if (this.refreshPromise) {
+      return this.refreshPromise
     }
 
+    const authorization = await this.authorization
+
+    if (this.authorizationIsValid(authorization)) {
+      return authorization
+    }
+
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.createAuthorizationPromise()
+        .then((refreshedAuthorization) => {
+          this.authorization = Promise.resolve(refreshedAuthorization)
+
+          return refreshedAuthorization
+        })
+        .catch((error) => {
+          this.authorization = null
+
+          throw error
+        })
+        .finally(() => {
+          this.refreshPromise = null
+        })
+    }
+
+    return this.refreshPromise
+  }
+
+  authorizationIsValid(authorization) {
+    return (
+      Boolean(authorization?.expiresAt) &&
+      authorization.expiresAt.getTime() > Date.now()
+    )
+  }
+
+  createAuthorizationPromise() {
     this.logger.info(
       'Fetching Cognito access token for the APHA Integration Bridge'
     )
 
-    this.pendingTokenPromise = this.requestAccessToken().finally(() => {
-      this.pendingTokenPromise = null
-    })
-
-    return this.pendingTokenPromise
-  }
-
-  tokenIsValid() {
-    return (
-      Boolean(this.accessTokenExpiresAt) &&
-      (this.accessTokenExpiresAt ?? 0) > Date.now()
-    )
+    return this.requestAccessToken()
   }
 
   async requestAccessToken() {
@@ -199,21 +228,23 @@ class IntegrationBridgeClient {
 
     const accessToken = validatedToken.access_token
 
-    this.accessToken = accessToken
+    const expiresAt = this.calculateExpiry(validatedToken.expires_in)
 
-    const expiresInSeconds = Number(validatedToken.expires_in ?? 0)
+    return { accessToken, expiresAt }
+  }
+
+  calculateExpiry(expiresInSeconds) {
+    const expiresIn = Number(expiresInSeconds ?? 0)
 
     const bufferMs = this.tokenBufferSeconds * 1000
 
-    let expiryMs = 0
-
-    if (expiresInSeconds > 0) {
-      expiryMs = Math.max(expiresInSeconds * 1000 - bufferMs, 0)
+    if (expiresIn <= 0) {
+      return new Date()
     }
 
-    this.accessTokenExpiresAt = Date.now() + expiryMs
+    const expiresAtMs = Date.now() + Math.max(expiresIn * 1000 - bufferMs, 0)
 
-    return accessToken
+    return new Date(expiresAtMs)
   }
 
   async safeFetch(url, options) {
