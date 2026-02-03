@@ -126,6 +126,35 @@ npm install
   SESSION_COOKIE_PASSWORD=please-change-me-to-a-32-characters-secret
   ```
 
+#### APHA Integration Bridge: M2M Cognito
+
+- Cognito M2M client credentials are required to call the Integration Bridge in local development.
+- Example `.env` additions:
+  ```
+  APHA_INTEGRATION_BRIDGE_BASE_URL=http://localhost:5676
+  APHA_INTEGRATION_BRIDGE_TOKEN_URL=https://cognito-idp.<region>.amazonaws.com/<user-pool-id>/oauth2/token
+  APHA_INTEGRATION_BRIDGE_CLIENT_ID=<client-id>
+  APHA_INTEGRATION_BRIDGE_CLIENT_SECRET=<client-secret>
+  ```
+
+### APHA Integration Bridge
+
+- Add absolute or relative path to a locally cloned [APHA Integration Bridge](https://github.com/defra/apha-integration-bridge) to `.env`:
+  ```
+  APHA_INTEGRATION_BRIDGE_REPO=../apha-integration-bridge
+  ```
+- Enable all profiles in docker compose to run a local instance of the Integration Bridge with OracleDB support in `.env`:
+  ```
+  COMPOSE_PROFILES=*
+  ```
+- Login now checks Salesforce presence by calling `POST /case-management/users/find` via the integration bridge; access is denied when no user is returned.
+- Configure the client-credential flow with `APHA_INTEGRATION_BRIDGE_BASE_URL`, `APHA_INTEGRATION_BRIDGE_TOKEN_URL`, `APHA_INTEGRATION_BRIDGE_CLIENT_ID`, and `APHA_INTEGRATION_BRIDGE_CLIENT_SECRET`.
+- The integration client caches Cognito access tokens in memory to avoid unnecessary token requests.
+- A locally running Integration Bridge API is expected in development; set the `APHA_INTEGRATION_BRIDGE_*` variables to point at your local instance.
+
+> When running the APHA Integration Bridge locally via Docker Compose, it runs in development mode to ensure that any changes to the API are
+> reflected without needing to rebuild the Docker image. This is achieved by mounting the source code into the container.
+
 ### Development
 
 To run the application in `development` mode run:

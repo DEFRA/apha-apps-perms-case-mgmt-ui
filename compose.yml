@@ -1,28 +1,33 @@
-version: '3.4'
-services:
+include:
+  # run the oracledb service locally with mock data
+  - path: '${APHA_INTEGRATION_BRIDGE_REPO:-../apha-integration-bridge}/.docker-compose/oracledb.compose.yml'
+    service: oracledb
+    profiles:
+      - all
 
-  localstack:
-    image: localstack/localstack:3.0.2
-    ports:
-      - '4566:4566' # LocalStack Gateway
-      - '4510-4559:4510-4559' # external services port range
-    env_file:
-      - 'compose/aws.env'
-    environment:
-      DEBUG: ${DEBUG:-1}
-      LS_LOG: WARN # Localstack DEBUG Level
-      SERVICES: s3,sqs,sns,firehose
-      LOCALSTACK_HOST: 127.0.0.1
-    volumes:
-      - '${TMPDIR:-/tmp}/localstack:/var/lib/localstack'
-      - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
-    healthcheck:
-      test: ['CMD', 'curl', 'localhost:4566']
-      interval: 5s
-      start_period: 5s
-      retries: 3
-    networks:
-      - cdp-tenant
+services:
+  # localstack:
+  #   image: localstack/localstack:3.0.2
+  #   ports:
+  #     - '4566:4566' # LocalStack Gateway
+  #     - '4510-4559:4510-4559' # external services port range
+  #   env_file:
+  #     - 'compose/aws.env'
+  #   environment:
+  #     DEBUG: ${DEBUG:-1}
+  #     LS_LOG: WARN # Localstack DEBUG Level
+  #     SERVICES: s3,sqs,sns,firehose
+  #     LOCALSTACK_HOST: 127.0.0.1
+  #   volumes:
+  #     - '${TMPDIR:-/tmp}/localstack:/var/lib/localstack'
+  #     - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
+  #   healthcheck:
+  #     test: ['CMD', 'curl', 'localhost:4566']
+  #     interval: 5s
+  #     start_period: 5s
+  #     retries: 3
+  #   networks:
+  #     - cdp-tenant
 
   redis:
     image: redis:7.2.3-alpine3.18
@@ -42,28 +47,33 @@ services:
       - mongodb-data:/data
     restart: always
 
-################################################################################
+  ################################################################################
 
-  your-frontend:
-    build: ./
+  apha-apps-perms-case-mgmt-ui:
+    build:
+      context: .
+      target: development
+    profiles:
+      - self
     ports:
       - '3000:3000'
     links:
-      - 'localstack:localstack'
+      # - 'localstack:localstack'
       - 'redis:redis'
     depends_on:
-      localstack:
-        condition: service_healthy
+      # localstack:
+      #   condition: service_healthy
       redis:
         condition: service_started
     env_file:
-      - 'compose/aws.env'
+      - '.env'
     environment:
       PORT: 3000
       NODE_ENV: development
       REDIS_HOST: redis
-      LOCALSTACK_ENDPOINT: http://localstack:4566
+      # LOCALSTACK_ENDPOINT: http://localstack:4566
       USE_SINGLE_INSTANCE_CACHE: true
+      APHA_INTEGRATION_BRIDGE_BASE_URL: http://apha-integration-bridge:5676
     networks:
       - cdp-tenant
 
@@ -88,7 +98,35 @@ services:
   #   networks:
   #     - cdp-tenant
 
-################################################################################
+  ################################################################################
+
+  apha-integration-bridge:
+    build:
+      context: ${APHA_INTEGRATION_BRIDGE_REPO:-../apha-integration-bridge}
+      target: development
+    profiles:
+      - all
+    ports:
+      - '5676:5676'
+    links:
+      - 'mongodb:mongodb'
+      - 'oracledb:oracledb'
+    depends_on:
+      mongodb:
+        condition: service_started
+      oracledb:
+        condition: service_started
+    env_file:
+      - '.env'
+    volumes:
+      - '${APHA_INTEGRATION_BRIDGE_REPO:-../apha-integration-bridge}/src:/home/node/src'
+    environment:
+      PORT: 5676
+      NODE_ENV: development
+      MONGO_URI: mongodb://mongodb:27017/
+      ORACLEDB_SAM_SMDB_HOST: oracledb:1521
+    networks:
+      - cdp-tenant
 
 volumes:
   mongodb-data:

@@ -94,10 +94,19 @@ const mockOidcProvider = {
           if (!redirectUri) {
             return h.response('missing redirect_uri').code(400)
           }
+
+          const appBaseUrl = config.get('appBaseUrl').replace(/\/$/, '')
+
+          if (!redirectUri.startsWith(appBaseUrl)) {
+            return h.response('invalid redirect_uri').code(400)
+          }
+
           const params = new URLSearchParams({ code: 'mock-code' })
+
           if (state) {
             params.append('state', state)
           }
+
           return h.redirect(`${redirectUri}?${params.toString()}`)
         }
       })
@@ -119,7 +128,7 @@ const mockOidcProvider = {
           const payload = {
             oid: 'mock-user',
             sub: 'mock-user',
-            preferred_username: 'mock.user@example.com',
+            preferred_username: 'aphadev.mehboob.alam@defra.gov.uk',
             name: 'Mock User',
             login_hint: 'mock',
             aud: clientId,
