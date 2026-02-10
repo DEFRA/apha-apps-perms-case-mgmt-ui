@@ -10,6 +10,7 @@ describe('IntegrationBridgeCommand', () => {
     ).toThrow(IntegrationBridgeCommandError)
 
     try {
+      // eslint-disable-next-line no-new
       new FindCaseManagementUserCommand({ emailAddress: 'not-an-email' })
     } catch (error) {
       expect(error).toBeInstanceOf(IntegrationBridgeCommandError)

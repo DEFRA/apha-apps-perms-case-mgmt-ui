@@ -22,11 +22,7 @@ const { Response } = globalThis
 
 const baseUrl = 'https://bridge.example'
 
-const tokenUrl = `${baseUrl}/oauth2/token`
-
 const findUrl = `${baseUrl}/case-management/users/find`
-
-const tokenResponse = { access_token: 'token-123', expires_in: 3600 }
 
 const server = setupServer()
 
@@ -35,6 +31,14 @@ beforeAll(() => server.listen())
 afterAll(() => server.close())
 
 afterEach(() => server.resetHandlers())
+
+const noopMiddleware = async (request) => request
+
+const authMiddleware = async (request) => {
+  const headers = new Headers(request.headers)
+  headers.set('Authorization', 'Bearer token-123')
+  return new Request(request, { headers })
+}
 
 class TestPostCommand extends IntegrationBridgeCommand {
   constructor({ path, body }) {
@@ -54,8 +58,8 @@ class TestPostCommand extends IntegrationBridgeCommand {
 describe('IntegrationBridgeClient', () => {
   test('sends a FindCaseManagementUserCommand via send()', async () => {
     server.use(
-      http.post(tokenUrl, () => HttpResponse.json(tokenResponse)),
       http.post(findUrl, async ({ request }) => {
+        expect(request.headers.get('authorization')).toBe('Bearer token-123')
         const payload = await request.json()
         expect(payload).toEqual({ emailAddress: 'user@example.com' })
         return HttpResponse.json({
@@ -66,9 +70,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      middleware: [authMiddleware]
     })
 
     const result = await client.send(
@@ -96,15 +98,15 @@ describe('IntegrationBridgeClient', () => {
     }
 
     server.use(
-      http.post(tokenUrl, () => HttpResponse.json(tokenResponse)),
-      http.post(`${baseUrl}/no-validate`, () => HttpResponse.json({ ok: true }))
+      http.post(`${baseUrl}/no-validate`, async ({ request }) => {
+        expect(request.headers.get('authorization')).toBe('Bearer token-123')
+        return HttpResponse.json({ ok: true })
+      })
     )
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      middleware: [authMiddleware]
     })
 
     const result = await client.send(command)
@@ -113,133 +115,36 @@ describe('IntegrationBridgeClient', () => {
     expect(validateCalls).toBe(0)
   })
 
-  test('fetches a token and posts to the case management find endpoint', async () => {
-    let tokenCalls = 0
-    let findCalls = 0
+  test('applies request middleware in order', async () => {
+    const order = []
     server.use(
-      http.post(tokenUrl, async ({ request }) => {
-        tokenCalls += 1
-        const body = await request.formData()
-        expect(body.get('grant_type')).toBe('client_credentials')
-        expect(body.get('client_id')).toBe('client-id')
-        expect(body.get('client_secret')).toBe('client-secret')
-        expect(request.headers.get('authorization')).toContain('Basic ')
-        return HttpResponse.json(tokenResponse)
-      }),
-      http.post(findUrl, async ({ request }) => {
-        findCalls += 1
-        expect(request.headers.get('authorization')).toBe(
-          `Bearer ${tokenResponse.access_token}`
-        )
-        const payload = await request.json()
-        expect(payload).toEqual({ emailAddress: 'user@example.com' })
-        return HttpResponse.json({
-          data: [{ id: 'case-user', type: 'case-management-user' }]
-        })
-      })
+      http.post(`${baseUrl}/ordered`, () => HttpResponse.json({ ok: true }))
     )
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      middleware: [
+        async (request) => {
+          order.push('one')
+          return request
+        },
+        async (request) => {
+          order.push('two')
+          return request
+        }
+      ]
     })
 
     const result = await client.send(
-      new FindCaseManagementUserCommand({ emailAddress: 'user@example.com' })
+      new TestPostCommand({ path: '/ordered', body: { ok: true } })
     )
 
-    expect(result?.data?.[0]?.id).toBe('case-user')
-    expect(tokenCalls).toBe(1)
-    expect(findCalls).toBe(1)
-  })
-
-  test('reuses a cached access token when it is still valid', async () => {
-    let tokenCalls = 0
-    let findCalls = 0
-    server.use(
-      http.post(tokenUrl, () => {
-        tokenCalls += 1
-        return HttpResponse.json(tokenResponse)
-      }),
-      http.post(findUrl, () => {
-        findCalls += 1
-        return HttpResponse.json({ data: [] })
-      })
-    )
-
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
-    })
-
-    await client.send(
-      new FindCaseManagementUserCommand({ emailAddress: 'user@example.com' })
-    )
-    await client.send(
-      new FindCaseManagementUserCommand({ emailAddress: 'user@example.com' })
-    )
-
-    expect(tokenCalls).toBe(1)
-    expect(findCalls).toBe(2)
-  })
-
-  test('refreshes an expired token only once when concurrent requests happen', async () => {
-    vi.useFakeTimers()
-    let tokenCalls = 0
-    const authHeaders = []
-
-    server.use(
-      http.post(tokenUrl, () => {
-        tokenCalls += 1
-        return HttpResponse.json({
-          access_token: `token-${tokenCalls}`,
-          expires_in: tokenCalls === 1 ? 1 : 3600
-        })
-      }),
-      http.post(`${baseUrl}/foo`, ({ request }) => {
-        authHeaders.push(request.headers.get('authorization'))
-        return HttpResponse.json({ ok: true })
-      }),
-      http.post(`${baseUrl}/bar`, ({ request }) => {
-        authHeaders.push(request.headers.get('authorization'))
-        return HttpResponse.json({ ok: true })
-      })
-    )
-
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret',
-      tokenBufferSeconds: 0
-    })
-
-    // Seed an expired token to force a refresh
-    client.authorization = Promise.resolve({
-      accessToken: 'stale-token',
-      expiresAt: new Date(Date.now() - 1000)
-    })
-
-    const requests = Promise.all([
-      client.send(new TestPostCommand({ path: '/foo', body: {} })),
-      client.send(new TestPostCommand({ path: '/bar', body: {} }))
-    ])
-
-    vi.advanceTimersByTime(2000)
-    await requests
-
-    expect(tokenCalls).toBe(1)
-    expect(authHeaders).toEqual(['Bearer token-1', 'Bearer token-1'])
-    vi.useRealTimers()
+    expect(result).toEqual({ ok: true })
+    expect(order).toEqual(['one', 'two'])
   })
 
   test('throws a request error when the bridge responds with a non-200 status', async () => {
     server.use(
-      http.post(tokenUrl, () => HttpResponse.json(tokenResponse)),
       http.post(findUrl, () =>
         HttpResponse.json({ message: 'oops' }, { status: 500 })
       )
@@ -247,9 +152,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      middleware: [authMiddleware]
     })
 
     await expect(
@@ -265,37 +168,25 @@ describe('IntegrationBridgeClient', () => {
         new IntegrationBridgeClient({
           // @ts-expect-error intentional for test
           baseUrl: null,
-          tokenUrl,
-          clientId: 'client-id',
-          clientSecret: 'client-secret'
+          middleware: [noopMiddleware]
         })
     ).toThrow(IntegrationBridgeConfigurationError)
   })
 
-  test('throws when token response is missing required fields', async () => {
-    server.use(
-      http.post(tokenUrl, () =>
-        HttpResponse.json({ expires_in: 3600 }, { status: 200 })
-      )
-    )
-
+  test('throws when middleware does not return a Request', async () => {
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      // @ts-expect-error intentional invalid middleware for test coverage
+      middleware: [async () => ({ not: 'a-request' })]
     })
 
     await expect(
-      client.send(
-        new FindCaseManagementUserCommand({ emailAddress: 'user@example.com' })
-      )
+      client.send(new TestPostCommand({ path: '/foo', body: {} }))
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
   })
 
   test('throws when find response does not match expected shape', async () => {
     server.use(
-      http.post(tokenUrl, () => HttpResponse.json(tokenResponse)),
       http.post(findUrl, () =>
         HttpResponse.json({ links: { self: 'case-management/users/find' } })
       )
@@ -303,9 +194,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      middleware: [authMiddleware]
     })
 
     await expect(
@@ -319,23 +208,19 @@ describe('IntegrationBridgeClient', () => {
     const failingFetch = vi.fn().mockRejectedValue(new Error('network down'))
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret',
+      middleware: [noopMiddleware],
       fetchImpl: failingFetch
     })
 
-    await expect(client.safeFetch('http://example.com', {})).rejects.toThrow(
-      'Failed to communicate with the APHA Integration Bridge'
-    )
+    await expect(
+      client.safeFetch(new Request('http://example.com'))
+    ).rejects.toThrow('Failed to communicate with the APHA Integration Bridge')
   })
 
   test('parses payloads defensively', async () => {
     const client = new IntegrationBridgeClient({
       baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
+      middleware: [noopMiddleware]
     })
 
     const empty = await client.readPayload(new Response(''))
@@ -343,19 +228,5 @@ describe('IntegrationBridgeClient', () => {
 
     const text = await client.readPayload(new Response('not-json'))
     expect(text).toBe('not-json')
-  })
-
-  test('calculateExpiry returns immediate expiry when expiresIn is invalid', () => {
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      tokenUrl,
-      clientId: 'client-id',
-      clientSecret: 'client-secret'
-    })
-
-    const now = Date.now()
-    const expires = client.calculateExpiry(undefined)
-
-    expect(expires.getTime()).toBeGreaterThanOrEqual(now)
   })
 })

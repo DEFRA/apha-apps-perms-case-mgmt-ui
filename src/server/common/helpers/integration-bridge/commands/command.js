@@ -1,4 +1,3 @@
-import Joi from 'joi'
 /**
  * @typedef {{ method?: string, path: string, body?: unknown }} IntegrationBridgeRequestConfig
  */

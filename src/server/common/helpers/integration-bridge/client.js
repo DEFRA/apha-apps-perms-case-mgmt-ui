@@ -1,8 +1,3 @@
-import { Buffer } from 'node:buffer'
-
-import { TokenResponseSchema } from './schemas.js'
-import { createLogger } from '../logging/logger.js'
-
 export class IntegrationBridgeConfigurationError extends Error {
   constructor(message) {
     super(message)
@@ -31,48 +26,22 @@ export class IntegrationBridgeClient {
   /**
    * @param {{
    *   baseUrl: string
-   *   tokenUrl: string
-   *   clientId: string
-   *   clientSecret: string
+   *   middleware: Array<(request: Request) => Promise<Request> | Request>
    *   fetchImpl?: typeof fetch
-   *   logger?: import('pino').BaseLogger
-   *   tokenBufferSeconds?: number
    * }} options
    */
-  constructor({
-    baseUrl,
-    tokenUrl,
-    clientId,
-    clientSecret,
-    fetchImpl = fetch,
-    logger = createLogger(),
-    tokenBufferSeconds = 30
-  }) {
-    if (!baseUrl || !tokenUrl || !clientId || !clientSecret) {
+  constructor({ baseUrl, middleware, fetchImpl = fetch }) {
+    if (!baseUrl || !Array.isArray(middleware) || middleware.length === 0) {
       throw new IntegrationBridgeConfigurationError(
-        'Integration Bridge requires baseUrl, tokenUrl, clientId and clientSecret to be configured'
+        'Integration Bridge requires baseUrl and middleware to be configured'
       )
     }
 
     this.baseUrl = baseUrl
 
-    this.tokenUrl = tokenUrl
-
-    this.clientId = clientId
-
-    this.clientSecret = clientSecret
-
     this.fetch = fetchImpl
 
-    this.logger = logger
-
-    this.tokenBufferSeconds = tokenBufferSeconds
-
-    /** @type {Promise<{ accessToken: string, expiresAt: Date }> | null} */
-    this.authorization = null
-
-    /** @type {Promise<{ accessToken: string, expiresAt: Date }> | null} */
-    this.refreshPromise = null
+    this.middleware = middleware
   }
 
   async send(command) {
@@ -96,21 +65,29 @@ export class IntegrationBridgeClient {
   }
 
   async requestJson({ method, path, body, schema, contextLabel }) {
-    const { accessToken } = await this.getAuthorization()
-
     const url = new URL(path, this.baseUrl)
 
-    const headers = new Headers({
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`
-    })
-
-    const response = await this.safeFetch(url, {
+    let request = new Request(url, {
       method,
-      headers,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
       body: body === undefined ? undefined : JSON.stringify(body)
     })
+
+    for (const middleware of this.middleware) {
+      // eslint-disable-next-line no-await-in-loop
+      request = await middleware(request)
+
+      if (!(request instanceof Request)) {
+        throw new IntegrationBridgeRequestError(
+          'Integration Bridge middleware must return a Request'
+        )
+      }
+    }
+
+    const response = await this.safeFetch(request)
 
     const payload = await this.readPayload(response)
 
@@ -128,119 +105,9 @@ export class IntegrationBridgeClient {
     return payload
   }
 
-  async getAuthorization() {
-    if (!this.authorization) {
-      this.authorization = this.createAuthorizationPromise().catch((error) => {
-        this.authorization = null
-
-        throw error
-      })
-
-      return this.authorization
-    }
-
-    if (this.refreshPromise) {
-      return this.refreshPromise
-    }
-
-    const authorization = await this.authorization
-
-    if (this.authorizationIsValid(authorization)) {
-      return authorization
-    }
-
-    if (!this.refreshPromise) {
-      this.refreshPromise = this.createAuthorizationPromise()
-        .then((refreshedAuthorization) => {
-          this.authorization = Promise.resolve(refreshedAuthorization)
-
-          return refreshedAuthorization
-        })
-        .catch((error) => {
-          this.authorization = null
-
-          throw error
-        })
-        .finally(() => {
-          this.refreshPromise = null
-        })
-    }
-
-    return this.refreshPromise
-  }
-
-  authorizationIsValid(authorization) {
-    return (
-      Boolean(authorization?.expiresAt) &&
-      authorization.expiresAt.getTime() > Date.now()
-    )
-  }
-
-  createAuthorizationPromise() {
-    this.logger.info(
-      'Fetching Cognito access token for the APHA Integration Bridge'
-    )
-
-    return this.requestAccessToken()
-  }
-
-  async requestAccessToken() {
-    const body = new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: this.clientId,
-      client_secret: this.clientSecret
-    })
-
-    const response = await this.safeFetch(this.tokenUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${Buffer.from(
-          `${this.clientId}:${this.clientSecret}`
-        ).toString('base64')}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body
-    })
-
-    const payload = await this.readPayload(response)
-
-    if (!response.ok) {
-      throw new IntegrationBridgeRequestError(
-        `Failed to fetch access token: ${response.status}`,
-        { status: response.status, payload }
-      )
-    }
-
-    const validatedToken = this.validatePayload(
-      payload,
-      TokenResponseSchema,
-      'token response'
-    )
-
-    const accessToken = validatedToken.access_token
-
-    const expiresAt = this.calculateExpiry(validatedToken.expires_in)
-
-    return { accessToken, expiresAt }
-  }
-
-  calculateExpiry(expiresInSeconds) {
-    const expiresIn = Number(expiresInSeconds ?? 0)
-
-    const bufferMs = this.tokenBufferSeconds * 1000
-
-    if (expiresIn <= 0) {
-      return new Date()
-    }
-
-    const expiresAtMs = Date.now() + Math.max(expiresIn * 1000 - bufferMs, 0)
-
-    return new Date(expiresAtMs)
-  }
-
-  async safeFetch(url, options) {
+  async safeFetch(request) {
     try {
-      return await this.fetch(url, options)
+      return await this.fetch(request)
     } catch (error) {
       throw new IntegrationBridgeRequestError(
         'Failed to communicate with the APHA Integration Bridge',

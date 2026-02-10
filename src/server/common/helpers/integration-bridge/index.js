@@ -3,13 +3,18 @@ import {
   IntegrationBridgeClient,
   IntegrationBridgeConfigurationError
 } from './client.js'
+import { bearerToken } from './middleware/bearer-token.js'
 
 function buildIntegrationBridgeClient() {
   return new IntegrationBridgeClient({
     baseUrl: config.get('integrationBridge.baseUrl'),
-    tokenUrl: config.get('integrationBridge.tokenUrl'),
-    clientId: config.get('integrationBridge.clientId'),
-    clientSecret: config.get('integrationBridge.clientSecret')
+    middleware: [
+      bearerToken({
+        tokenUrl: config.get('integrationBridge.tokenUrl'),
+        clientId: config.get('integrationBridge.clientId'),
+        clientSecret: config.get('integrationBridge.clientSecret')
+      })
+    ]
   })
 }
 

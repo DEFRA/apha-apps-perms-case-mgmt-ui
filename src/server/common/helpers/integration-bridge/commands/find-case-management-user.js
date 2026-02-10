@@ -30,7 +30,7 @@ const FindCaseManagementUserOutputSchema = Joi.object({
     .optional()
 }).unknown(true)
 
-/** @extends {IntegrationBridgeCommand<FindCaseManagementUserInput, FindCaseManagementUserOutput>} */
+/** @augments {IntegrationBridgeCommand<FindCaseManagementUserInput, FindCaseManagementUserOutput>} */
 class FindCaseManagementUserCommand extends IntegrationBridgeCommand {
   get inputSchema() {
     return FindCaseManagementUserInputSchema
