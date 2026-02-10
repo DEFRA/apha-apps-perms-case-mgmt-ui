@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { authCallbackController } from './callback.js'
+import { FindCaseManagementUserCommand } from '../common/helpers/integration-bridge/commands/find-case-management-user.js'
 
 const { createUserSession, redirectWithRefresh } = vi.hoisted(() => ({
   createUserSession: vi.fn(),
@@ -10,8 +11,8 @@ const { createUserSession, redirectWithRefresh } = vi.hoisted(() => ({
 }))
 
 const { integrationClient } = vi.hoisted(() => ({
-  /** @type {{ findCaseManagementUser: import('vitest').Mock }} */
-  integrationClient: { findCaseManagementUser: vi.fn() }
+  /** @type {{ send: import('vitest').Mock }} */
+  integrationClient: { send: vi.fn() }
 }))
 
 vi.mock('node:crypto', () => ({
@@ -32,7 +33,7 @@ vi.mock('../common/helpers/integration-bridge/index.js', () => ({
 
 describe('authCallbackController', () => {
   beforeEach(() => {
-    integrationClient.findCaseManagementUser = vi
+    integrationClient.send = vi
       .fn()
       .mockResolvedValue({ data: [{ id: 'user-123' }] })
     createUserSession.mockReset()
@@ -43,17 +44,17 @@ describe('authCallbackController', () => {
    * @param {{
    *   isAuthenticated?: boolean
    *   flashReturn?: string[]
-   *   findCaseManagementUser?: import('vitest').Mock
+   *   send?: import('vitest').Mock
    * }} [options]
    */
   const buildRequest = ({
     isAuthenticated = true,
     flashReturn = ['/next'],
-    findCaseManagementUser
+    send
   } = {}) => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-    if (findCaseManagementUser) {
-      integrationClient.findCaseManagementUser = findCaseManagementUser
+    if (send) {
+      integrationClient.send = send
     }
     return {
       auth: {
@@ -77,9 +78,10 @@ describe('authCallbackController', () => {
     expect(request.sessionCookie.set).toHaveBeenCalledWith({
       sessionId: 'session-123'
     })
-    expect(integrationClient.findCaseManagementUser).toHaveBeenCalledWith(
-      'user@example.com'
-    )
+    expect(integrationClient.send).toHaveBeenCalledTimes(1)
+    const [command] = integrationClient.send.mock.calls[0]
+    expect(command).toBeInstanceOf(FindCaseManagementUserCommand)
+    expect(command.input).toEqual({ emailAddress: 'user@example.com' })
     expect(redirectWithRefresh).toHaveBeenCalledWith(h, '/next')
     expect(response).toEqual({ redirectedTo: '/next' })
   })
@@ -92,14 +94,14 @@ describe('authCallbackController', () => {
 
     expect(createUserSession).not.toHaveBeenCalled()
     expect(request.sessionCookie.set).not.toHaveBeenCalled()
-    expect(integrationClient.findCaseManagementUser).not.toHaveBeenCalled()
+    expect(integrationClient.send).not.toHaveBeenCalled()
     expect(redirectWithRefresh).toHaveBeenCalledWith(h, '/')
     expect(response).toEqual({ redirectedTo: '/' })
   })
 
   test('rejects login when user is not found in case management', async () => {
     const request = buildRequest({
-      findCaseManagementUser: vi.fn().mockResolvedValue({ data: [] })
+      send: vi.fn().mockResolvedValue({ data: [] })
     })
     const h = {}
 
@@ -111,9 +113,7 @@ describe('authCallbackController', () => {
 
   test('returns an error when integration bridge fails', async () => {
     const request = buildRequest({
-      findCaseManagementUser: vi
-        .fn()
-        .mockRejectedValue(new Error('bridge offline'))
+      send: vi.fn().mockRejectedValue(new Error('bridge offline'))
     })
     const h = {}
 
@@ -132,7 +132,7 @@ describe('authCallbackController', () => {
     await expect(authCallbackController.handler(request, h)).rejects.toThrow(
       /Email address missing/
     )
-    expect(integrationClient.findCaseManagementUser).not.toHaveBeenCalled()
+    expect(integrationClient.send).not.toHaveBeenCalled()
     expect(request.sessionCookie.set).not.toHaveBeenCalled()
   })
 

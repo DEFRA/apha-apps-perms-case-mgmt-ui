@@ -1,9 +1,9 @@
 import { Buffer } from 'node:buffer'
 
-import { FindUserResponseSchema, TokenResponseSchema } from './schemas.js'
+import { TokenResponseSchema } from './schemas.js'
 import { createLogger } from '../logging/logger.js'
 
-class IntegrationBridgeConfigurationError extends Error {
+export class IntegrationBridgeConfigurationError extends Error {
   constructor(message) {
     super(message)
 
@@ -11,7 +11,7 @@ class IntegrationBridgeConfigurationError extends Error {
   }
 }
 
-class IntegrationBridgeRequestError extends Error {
+export class IntegrationBridgeRequestError extends Error {
   /**
    * @param {string} message
    * @param {{ status?: number, payload?: unknown, cause?: unknown }} [options]
@@ -27,7 +27,7 @@ class IntegrationBridgeRequestError extends Error {
   }
 }
 
-class IntegrationBridgeClient {
+export class IntegrationBridgeClient {
   /**
    * @param {{
    *   baseUrl: string
@@ -75,35 +75,30 @@ class IntegrationBridgeClient {
     this.refreshPromise = null
   }
 
-  async findCaseManagementUser(emailAddress) {
-    if (!emailAddress) {
+  async send(command) {
+    if (!command || typeof command.resolveRequest !== 'function') {
       throw new IntegrationBridgeRequestError(
-        'emailAddress is required to look up a case management user'
+        'Integration Bridge command must implement .resolveRequest'
       )
     }
 
-    return this.postJson(
-      '/case-management/users/find',
-      { emailAddress },
-      FindUserResponseSchema,
-      'case-management/users/find'
-    )
+    const contextLabel = command?.constructor?.name ?? 'command'
+
+    const { method = 'POST', path, body } = command.resolveRequest()
+
+    return this.requestJson({
+      method,
+      path,
+      body,
+      schema: command.outputSchema,
+      contextLabel: path ?? contextLabel
+    })
   }
 
-  /**
-   * @param {string} path
-   * @param {any} body
-   * @param {import('joi').Schema | null} schema
-   * @param {string} [contextLabel]
-   * @param {string} [forwardedUserToken] - Optional user access token to forward to downstream services
-   */
-  async postJson(path, body, schema, contextLabel, forwardedUserToken) {
+  async requestJson({ method, path, body, schema, contextLabel }) {
     const { accessToken } = await this.getAuthorization()
 
     const url = new URL(path, this.baseUrl)
-
-    const forwardedAuthorization =
-      this.formatForwardedAuthorization(forwardedUserToken)
 
     const headers = new Headers({
       Accept: 'application/json',
@@ -111,14 +106,10 @@ class IntegrationBridgeClient {
       Authorization: `Bearer ${accessToken}`
     })
 
-    if (forwardedAuthorization) {
-      headers.append('X-Forwarded-Authorization', forwardedAuthorization)
-    }
-
     const response = await this.safeFetch(url, {
-      method: 'POST',
+      method,
       headers,
-      body: JSON.stringify(body)
+      body: body === undefined ? undefined : JSON.stringify(body)
     })
 
     const payload = await this.readPayload(response)
@@ -286,32 +277,4 @@ class IntegrationBridgeClient {
       return text
     }
   }
-
-  /**
-   * Normalises an access token so it is safe to forward downstream.
-   * Returns null when no token is provided.
-   * @param {string} [forwardedUserToken]
-   * @returns {string | null}
-   */
-  formatForwardedAuthorization(forwardedUserToken) {
-    if (typeof forwardedUserToken !== 'string') {
-      return null
-    }
-
-    const trimmedToken = forwardedUserToken.trim()
-
-    if (!trimmedToken) {
-      return null
-    }
-
-    return trimmedToken.startsWith('Bearer ')
-      ? trimmedToken
-      : `Bearer ${trimmedToken}`
-  }
-}
-
-export {
-  IntegrationBridgeClient,
-  IntegrationBridgeConfigurationError,
-  IntegrationBridgeRequestError
 }

@@ -14,7 +14,7 @@ describe('integration-bridge index', () => {
 
     const { integrationClient } = await import('./index.js')
 
-    expect(() => integrationClient.findCaseManagementUser()).toThrow(
+    expect(() => integrationClient.send()).toThrow(
       'missing config'
     )
 

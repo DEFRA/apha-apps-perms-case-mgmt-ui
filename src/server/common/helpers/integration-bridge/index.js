@@ -24,7 +24,7 @@ function createIntegrationClient() {
       error instanceof IntegrationBridgeConfigurationError
     ) {
       return {
-        findCaseManagementUser() {
+        send() {
           throw error
         }
       }
