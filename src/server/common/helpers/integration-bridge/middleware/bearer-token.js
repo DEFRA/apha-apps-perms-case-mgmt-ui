@@ -79,9 +79,17 @@ const bearerToken = ({
     })
 
     if (error) {
+      const safePayload =
+        payload &&
+        typeof payload === 'object' &&
+        !Array.isArray(payload) &&
+        'access_token' in payload
+          ? { ...payload, access_token: '[REDACTED]' }
+          : payload
+
       throw new IntegrationBridgeRequestError(
         `Integration Bridge payload validation failed for ${contextLabel}`,
-        { payload, cause: error }
+        { payload: safePayload, cause: error }
       )
     }
 

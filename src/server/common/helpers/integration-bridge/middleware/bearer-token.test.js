@@ -21,7 +21,10 @@ beforeAll(() => server.listen())
 
 afterAll(() => server.close())
 
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+  vi.restoreAllMocks()
+})
 
 describe('bearerToken middleware', () => {
   test('adds Authorization header to the request', async () => {
@@ -135,5 +138,30 @@ describe('bearerToken middleware', () => {
     await expect(
       middleware(new Request('https://bridge.example/foo', { method: 'POST' }))
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
+  })
+
+  test('redacts access_token in validation error payloads', async () => {
+    server.use(
+      http.post(tokenUrl, () =>
+        HttpResponse.json({ access_token: 'token-123' }, { status: 200 })
+      )
+    )
+
+    const middleware = bearerToken({
+      tokenUrl,
+      clientId: 'client-id',
+      clientSecret: 'client-secret'
+    })
+
+    try {
+      await middleware(
+        new Request('https://bridge.example/foo', { method: 'POST' })
+      )
+    } catch (error) {
+      expect(error.payload?.access_token).toBe('[REDACTED]')
+      return
+    }
+
+    throw new Error('Expected middleware to throw')
   })
 })

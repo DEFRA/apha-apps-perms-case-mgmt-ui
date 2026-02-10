@@ -185,6 +185,36 @@ describe('IntegrationBridgeClient', () => {
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
   })
 
+  test('throws when middleware throws an error', async () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      middleware: [
+        async () => {
+          throw new Error('middleware boom')
+        }
+      ]
+    })
+
+    await expect(
+      client.send(new TestPostCommand({ path: '/foo', body: {} }))
+    ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
+  })
+
+  test('throws when command path is invalid', async () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      middleware: [noopMiddleware]
+    })
+
+    const badCommand = {
+      resolveRequest: () => ({ method: 'POST', path: '', body: {} })
+    }
+
+    await expect(client.send(badCommand)).rejects.toBeInstanceOf(
+      IntegrationBridgeRequestError
+    )
+  })
+
   test('throws when find response does not match expected shape', async () => {
     server.use(
       http.post(findUrl, () =>

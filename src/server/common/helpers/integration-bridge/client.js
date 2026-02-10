@@ -55,6 +55,18 @@ export class IntegrationBridgeClient {
 
     const { method = 'POST', path, body } = command.resolveRequest()
 
+    if (typeof path !== 'string' || !path.trim()) {
+      throw new IntegrationBridgeRequestError(
+        'Integration Bridge command must provide a valid path'
+      )
+    }
+
+    if (typeof method !== 'string' || !method.trim()) {
+      throw new IntegrationBridgeRequestError(
+        'Integration Bridge command must provide a valid method'
+      )
+    }
+
     return this.requestJson({
       method,
       path,
@@ -77,8 +89,14 @@ export class IntegrationBridgeClient {
     })
 
     for (const middleware of this.middleware) {
-      // eslint-disable-next-line no-await-in-loop
-      request = await middleware(request)
+      try {
+        request = await middleware(request)
+      } catch (error) {
+        throw new IntegrationBridgeRequestError(
+          `Integration Bridge middleware failed for ${contextLabel ?? path}`,
+          { cause: error }
+        )
+      }
 
       if (!(request instanceof Request)) {
         throw new IntegrationBridgeRequestError(
