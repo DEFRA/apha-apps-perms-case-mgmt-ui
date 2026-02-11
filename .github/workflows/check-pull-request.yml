@@ -21,6 +21,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure APHA Integration Bridge
+        uses: ./.github/actions/configure-apha-integration-bridge
+        with:
+          salesforce-base-url: ${{ secrets.APHA_INTEGRATION_BRIDGE_SALESFORCE_BASE_URL }}
+          salesforce-client-id: ${{ secrets.APHA_INTEGRATION_BRIDGE_SALESFORCE_CLIENT_ID }}
+          salesforce-client-secret: ${{ secrets.APHA_INTEGRATION_BRIDGE_SALESFORCE_CLIENT_SECRET }}
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
