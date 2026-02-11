@@ -4,7 +4,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_apha-apps-perms-case-mgmt-ui&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DEFRA_apha-apps-perms-case-mgmt-ui)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_apha-apps-perms-case-mgmt-ui&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DEFRA_apha-apps-perms-case-mgmt-ui)
 
-FrontEnd for a Case Management tool that will be used by flexible teams (including admins and vets) to view the details of customer applications and their corresponding cases
+Frontend for a Case Management tool that will be used by flexible teams (including admins and vets) to view the details of customer applications and their corresponding cases
 and process them by following series of pre-defined steps in order to reach a determination. Users of this tool will have the option to assign the cases to themselves
 or to someone else (if their role allows that) and a case could also be escalated to a specialist for review when required. Additional information could also be requested
 to the applicant and added to the case.
