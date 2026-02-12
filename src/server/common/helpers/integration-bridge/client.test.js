@@ -185,6 +185,17 @@ describe('IntegrationBridgeClient', () => {
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
   })
 
+  test('throws when command does not implement resolveRequest', async () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      middleware: [noopMiddleware]
+    })
+
+    await expect(client.send({})).rejects.toBeInstanceOf(
+      IntegrationBridgeRequestError
+    )
+  })
+
   test('throws when middleware throws an error', async () => {
     const client = new IntegrationBridgeClient({
       baseUrl,
@@ -198,6 +209,21 @@ describe('IntegrationBridgeClient', () => {
     await expect(
       client.send(new TestPostCommand({ path: '/foo', body: {} }))
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
+  })
+
+  test('throws when command method is invalid', async () => {
+    const client = new IntegrationBridgeClient({
+      baseUrl,
+      middleware: [noopMiddleware]
+    })
+
+    const badCommand = {
+      resolveRequest: () => ({ method: '', path: '/foo', body: {} })
+    }
+
+    await expect(client.send(badCommand)).rejects.toBeInstanceOf(
+      IntegrationBridgeRequestError
+    )
   })
 
   test('throws when command path is invalid', async () => {
