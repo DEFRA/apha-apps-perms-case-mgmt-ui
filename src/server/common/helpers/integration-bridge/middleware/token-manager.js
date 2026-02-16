@@ -21,7 +21,7 @@ import {
  * }} config
  * @returns {{ getAuthorization: () => Promise<Authorization> }}
  */
-const createTokenManager = ({
+export const createTokenManager = ({
   tokenUrl,
   clientId,
   clientSecret,
@@ -35,11 +35,11 @@ const createTokenManager = ({
     )
   }
 
-  /** @type {Promise<Authorization> | null} */
+  /** @type {Authorization | null} */
   let authorization = null
 
   /** @type {Promise<Authorization> | null} */
-  let refreshPromise = null
+  let authorizationPromise = null
 
   const authorizationIsValid = (currentAuthorization) =>
     Boolean(currentAuthorization?.expiresAt) &&
@@ -53,54 +53,6 @@ const createTokenManager = ({
     return new Date(expiresAtMs)
   }
 
-  const readPayload = async (response) => {
-    const text = await response.text()
-
-    if (!text) {
-      return null
-    }
-
-    try {
-      return JSON.parse(text)
-    } catch {
-      return text
-    }
-  }
-
-  const validatePayload = (payload, schema, contextLabel) => {
-    const { error, value } = schema.validate(payload, {
-      abortEarly: false
-    })
-
-    if (error) {
-      const safePayload =
-        payload &&
-        typeof payload === 'object' &&
-        !Array.isArray(payload) &&
-        'access_token' in payload
-          ? { ...payload, access_token: '[REDACTED]' }
-          : payload
-
-      throw new IntegrationBridgeRequestError(
-        `Integration Bridge payload validation failed for ${contextLabel}`,
-        { payload: safePayload, cause: error }
-      )
-    }
-
-    return value
-  }
-
-  const safeFetch = async (url, options) => {
-    try {
-      return await fetchImpl(url, options)
-    } catch (error) {
-      throw new IntegrationBridgeRequestError(
-        'Failed to communicate with the APHA Integration Bridge',
-        { cause: error }
-      )
-    }
-  }
-
   const requestAccessToken = async () => {
     logger.info('Fetching Cognito access token for the APHA Integration Bridge')
 
@@ -110,7 +62,7 @@ const createTokenManager = ({
       client_secret: clientSecret
     })
 
-    const response = await safeFetch(tokenUrl, {
+    const response = await fetchImpl(tokenUrl, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${Buffer.from(
@@ -121,66 +73,48 @@ const createTokenManager = ({
       body
     })
 
-    const payload = await readPayload(response)
-
     if (!response.ok) {
       throw new IntegrationBridgeRequestError(
         `Failed to fetch access token: ${response.status}`,
-        { status: response.status, payload }
+        { status: response.status, payload: await response.text() }
       )
     }
 
-    const validatedToken = validatePayload(
-      payload,
-      TokenResponseSchema,
-      'token response'
-    )
+    const { error, value } = TokenResponseSchema.validate(await response.json())
 
-    const accessToken = validatedToken.access_token
-    const expiresAt = calculateExpiry(validatedToken.expires_in)
+    if (error) {
+      throw new IntegrationBridgeRequestError(
+        'Integration Bridge token response validation failed',
+        { cause: error }
+      )
+    }
 
-    return { accessToken, expiresAt }
+    return {
+      accessToken: value.access_token,
+      expiresAt: calculateExpiry(value.expires_in)
+    }
   }
 
   const getAuthorization = async () => {
-    if (!authorization) {
-      authorization = requestAccessToken().catch((error) => {
-        authorization = null
-        throw error
-      })
-
+    if (authorization && authorizationIsValid(authorization)) {
       return authorization
     }
 
-    if (refreshPromise) {
-      return refreshPromise
+    if (authorizationPromise) {
+      return authorizationPromise
     }
 
-    const currentAuthorization = await authorization
+    authorizationPromise = requestAccessToken()
+      .then((nextAuthorization) => {
+        authorization = nextAuthorization
+        return nextAuthorization
+      })
+      .finally(() => {
+        authorizationPromise = null
+      })
 
-    if (authorizationIsValid(currentAuthorization)) {
-      return currentAuthorization
-    }
-
-    if (!refreshPromise) {
-      refreshPromise = requestAccessToken()
-        .then((refreshedAuthorization) => {
-          authorization = Promise.resolve(refreshedAuthorization)
-          return refreshedAuthorization
-        })
-        .catch((error) => {
-          authorization = null
-          throw error
-        })
-        .finally(() => {
-          refreshPromise = null
-        })
-    }
-
-    return refreshPromise
+    return authorizationPromise
   }
 
   return { getAuthorization }
 }
-
-export { createTokenManager }

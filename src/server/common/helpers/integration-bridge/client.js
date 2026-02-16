@@ -22,18 +22,37 @@ export class IntegrationBridgeRequestError extends Error {
   }
 }
 
+/**
+ * @typedef {'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'} IntegrationBridgeMethod
+ *
+ * @typedef {{
+ *   method?: IntegrationBridgeMethod
+ *   path: string
+ *   body?: unknown
+ * }} IntegrationBridgeRequestConfig
+ *
+ * @typedef {{
+ *   resolveRequest: () => IntegrationBridgeRequestConfig
+ *   outputSchema?: import('joi').Schema | null
+ * }} IntegrationBridgeCommand
+ *
+ * @typedef {(request: Request) => Promise<Request> | Request} IntegrationBridgeMiddleware
+ */
+
+const identityMiddleware = (request) => request
+
 export class IntegrationBridgeClient {
   /**
    * @param {{
    *   baseUrl: string
-   *   middleware: Array<(request: Request) => Promise<Request> | Request>
+   *   middleware?: IntegrationBridgeMiddleware
    *   fetchImpl?: typeof fetch
    * }} options
    */
-  constructor({ baseUrl, middleware, fetchImpl = fetch }) {
-    if (!baseUrl || !Array.isArray(middleware) || middleware.length === 0) {
+  constructor({ baseUrl, middleware = identityMiddleware, fetchImpl = fetch }) {
+    if (!baseUrl) {
       throw new IntegrationBridgeConfigurationError(
-        'Integration Bridge requires baseUrl and middleware to be configured'
+        'Integration Bridge requires baseUrl to be configured'
       )
     }
 
@@ -44,35 +63,20 @@ export class IntegrationBridgeClient {
     this.middleware = middleware
   }
 
+  /**
+   * @param {IntegrationBridgeCommand} command
+   */
   async send(command) {
-    if (!command || typeof command.resolveRequest !== 'function') {
-      throw new IntegrationBridgeRequestError(
-        'Integration Bridge command must implement .resolveRequest'
-      )
-    }
-
-    const contextLabel = command?.constructor?.name ?? 'command'
+    const contextLabel = command.constructor.name
 
     const { method = 'POST', path, body } = command.resolveRequest()
-
-    if (typeof path !== 'string' || !path.trim()) {
-      throw new IntegrationBridgeRequestError(
-        'Integration Bridge command must provide a valid path'
-      )
-    }
-
-    if (typeof method !== 'string' || !method.trim()) {
-      throw new IntegrationBridgeRequestError(
-        'Integration Bridge command must provide a valid method'
-      )
-    }
 
     return this.requestJson({
       method,
       path,
       body,
       schema: command.outputSchema,
-      contextLabel: path ?? contextLabel
+      contextLabel
     })
   }
 
@@ -88,21 +92,13 @@ export class IntegrationBridgeClient {
       body: body === undefined ? undefined : JSON.stringify(body)
     })
 
-    for (const middleware of this.middleware) {
-      try {
-        request = await middleware(request)
-      } catch (error) {
-        throw new IntegrationBridgeRequestError(
-          `Integration Bridge middleware failed for ${contextLabel ?? path}`,
-          { cause: error }
-        )
-      }
-
-      if (!(request instanceof Request)) {
-        throw new IntegrationBridgeRequestError(
-          'Integration Bridge middleware must return a Request'
-        )
-      }
+    try {
+      request = await this.middleware(request)
+    } catch (error) {
+      throw new IntegrationBridgeRequestError(
+        `Integration Bridge middleware failed for ${contextLabel}`,
+        { cause: error }
+      )
     }
 
     const response = await this.safeFetch(request)
@@ -117,7 +113,7 @@ export class IntegrationBridgeClient {
     }
 
     if (schema) {
-      return this.validatePayload(payload, schema, contextLabel ?? path)
+      return this.validatePayload(payload, schema, contextLabel)
     }
 
     return payload

@@ -5,16 +5,14 @@ import {
 } from './client.js'
 import { bearerToken } from './middleware/bearer-token.js'
 
-function buildIntegrationBridgeClient() {
+export function buildIntegrationBridgeClient() {
   return new IntegrationBridgeClient({
     baseUrl: config.get('integrationBridge.baseUrl'),
-    middleware: [
-      bearerToken({
-        tokenUrl: config.get('integrationBridge.tokenUrl'),
-        clientId: config.get('integrationBridge.clientId'),
-        clientSecret: config.get('integrationBridge.clientSecret')
-      })
-    ]
+    middleware: bearerToken({
+      tokenUrl: config.get('integrationBridge.tokenUrl'),
+      clientId: config.get('integrationBridge.clientId'),
+      clientSecret: config.get('integrationBridge.clientSecret')
+    })
   })
 }
 
@@ -39,4 +37,3 @@ function createIntegrationClient() {
 }
 
 export const integrationClient = createIntegrationClient()
-export { buildIntegrationBridgeClient }

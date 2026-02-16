@@ -12,7 +12,7 @@ import { createTokenManager } from './token-manager.js'
  * }} config
  * @returns {(request: Request) => Promise<Request>}
  */
-const bearerToken = (config) => {
+export const bearerToken = (config) => {
   const tokenManager = createTokenManager({
     ...config,
     logger: config.logger ?? createLogger()
@@ -27,5 +27,3 @@ const bearerToken = (config) => {
     return new Request(request, { headers })
   }
 }
-
-export { bearerToken }

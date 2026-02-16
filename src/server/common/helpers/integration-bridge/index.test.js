@@ -17,7 +17,9 @@ describe('integration-bridge index', () => {
 
     const { integrationClient } = await import('./index.js')
 
-    expect(() => integrationClient.send()).toThrow('missing config')
+    expect(() =>
+      integrationClient.send({ resolveRequest: () => ({ path: '/unused' }) })
+    ).toThrow('missing config')
 
     vi.resetModules()
     vi.doUnmock('./client.js')

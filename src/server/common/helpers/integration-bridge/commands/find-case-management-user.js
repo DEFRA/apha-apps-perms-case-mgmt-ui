@@ -10,11 +10,7 @@ import { IntegrationBridgeCommand } from './command.js'
  * }} FindCaseManagementUserOutput
  */
 
-const FindCaseManagementUserInputSchema = Joi.object({
-  emailAddress: Joi.string().email().required()
-}).required()
-
-const FindCaseManagementUserOutputSchema = Joi.object({
+export const FindCaseManagementUserOutputSchema = Joi.object({
   data: Joi.array()
     .items(
       Joi.object({
@@ -31,15 +27,14 @@ const FindCaseManagementUserOutputSchema = Joi.object({
 }).unknown(true)
 
 /** @augments {IntegrationBridgeCommand<FindCaseManagementUserInput, FindCaseManagementUserOutput>} */
-class FindCaseManagementUserCommand extends IntegrationBridgeCommand {
-  get inputSchema() {
-    return FindCaseManagementUserInputSchema
-  }
-
+export class FindCaseManagementUserCommand extends IntegrationBridgeCommand {
   get outputSchema() {
     return FindCaseManagementUserOutputSchema
   }
 
+  /**
+   * @returns {import('./command.js').IntegrationBridgeRequestConfig}
+   */
   resolveRequest() {
     return {
       method: 'POST',
@@ -47,10 +42,4 @@ class FindCaseManagementUserCommand extends IntegrationBridgeCommand {
       body: { emailAddress: this.input.emailAddress }
     }
   }
-}
-
-export {
-  FindCaseManagementUserCommand,
-  FindCaseManagementUserInputSchema,
-  FindCaseManagementUserOutputSchema
 }

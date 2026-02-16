@@ -41,11 +41,17 @@ const authMiddleware = async (request) => {
 }
 
 class TestPostCommand extends IntegrationBridgeCommand {
+  /**
+   * @param {{ path: string, body: unknown }} input
+   */
   constructor({ path, body }) {
     super(body)
     this.path = path
   }
 
+  /**
+   * @returns {import('./commands/command.js').IntegrationBridgeRequestConfig}
+   */
   resolveRequest() {
     return {
       method: 'POST',
@@ -70,7 +76,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [authMiddleware]
+      middleware: authMiddleware
     })
 
     const result = await client.send(
@@ -80,25 +86,9 @@ describe('IntegrationBridgeClient', () => {
     expect(result?.data?.[0]?.id).toBe('case-user')
   })
 
-  test('does not revalidate command input in send()', async () => {
-    let validateCalls = 0
-    const command = {
-      input: { foo: 'bar' },
-      inputSchema: {
-        validate: () => {
-          validateCalls += 1
-          return { value: { foo: 'bar' } }
-        }
-      },
-      resolveRequest: () => ({
-        method: 'POST',
-        path: '/no-validate',
-        body: { foo: 'bar' }
-      })
-    }
-
+  test('applies request middleware before fetching', async () => {
     server.use(
-      http.post(`${baseUrl}/no-validate`, async ({ request }) => {
+      http.post(`${baseUrl}/ordered`, async ({ request }) => {
         expect(request.headers.get('authorization')).toBe('Bearer token-123')
         return HttpResponse.json({ ok: true })
       })
@@ -106,33 +96,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [authMiddleware]
-    })
-
-    const result = await client.send(command)
-
-    expect(result).toEqual({ ok: true })
-    expect(validateCalls).toBe(0)
-  })
-
-  test('applies request middleware in order', async () => {
-    const order = []
-    server.use(
-      http.post(`${baseUrl}/ordered`, () => HttpResponse.json({ ok: true }))
-    )
-
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      middleware: [
-        async (request) => {
-          order.push('one')
-          return request
-        },
-        async (request) => {
-          order.push('two')
-          return request
-        }
-      ]
+      middleware: authMiddleware
     })
 
     const result = await client.send(
@@ -140,7 +104,6 @@ describe('IntegrationBridgeClient', () => {
     )
 
     expect(result).toEqual({ ok: true })
-    expect(order).toEqual(['one', 'two'])
   })
 
   test('throws a request error when the bridge responds with a non-200 status', async () => {
@@ -152,7 +115,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [authMiddleware]
+      middleware: authMiddleware
     })
 
     await expect(
@@ -162,83 +125,28 @@ describe('IntegrationBridgeClient', () => {
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
   })
 
-  test('throws a configuration error when baseUrl is not provided', async () => {
+  test('throws a configuration error when baseUrl is not provided', () => {
     expect(
       () =>
         new IntegrationBridgeClient({
           // @ts-expect-error intentional for test
           baseUrl: null,
-          middleware: [noopMiddleware]
+          middleware: noopMiddleware
         })
     ).toThrow(IntegrationBridgeConfigurationError)
-  })
-
-  test('throws when middleware does not return a Request', async () => {
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      // @ts-expect-error intentional invalid middleware for test coverage
-      middleware: [async () => ({ not: 'a-request' })]
-    })
-
-    await expect(
-      client.send(new TestPostCommand({ path: '/foo', body: {} }))
-    ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
-  })
-
-  test('throws when command does not implement resolveRequest', async () => {
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      middleware: [noopMiddleware]
-    })
-
-    await expect(client.send({})).rejects.toBeInstanceOf(
-      IntegrationBridgeRequestError
-    )
   })
 
   test('throws when middleware throws an error', async () => {
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [
-        async () => {
-          throw new Error('middleware boom')
-        }
-      ]
+      middleware: async () => {
+        throw new Error('middleware boom')
+      }
     })
 
     await expect(
       client.send(new TestPostCommand({ path: '/foo', body: {} }))
     ).rejects.toBeInstanceOf(IntegrationBridgeRequestError)
-  })
-
-  test('throws when command method is invalid', async () => {
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      middleware: [noopMiddleware]
-    })
-
-    const badCommand = {
-      resolveRequest: () => ({ method: '', path: '/foo', body: {} })
-    }
-
-    await expect(client.send(badCommand)).rejects.toBeInstanceOf(
-      IntegrationBridgeRequestError
-    )
-  })
-
-  test('throws when command path is invalid', async () => {
-    const client = new IntegrationBridgeClient({
-      baseUrl,
-      middleware: [noopMiddleware]
-    })
-
-    const badCommand = {
-      resolveRequest: () => ({ method: 'POST', path: '', body: {} })
-    }
-
-    await expect(client.send(badCommand)).rejects.toBeInstanceOf(
-      IntegrationBridgeRequestError
-    )
   })
 
   test('throws when find response does not match expected shape', async () => {
@@ -250,7 +158,7 @@ describe('IntegrationBridgeClient', () => {
 
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [authMiddleware]
+      middleware: authMiddleware
     })
 
     await expect(
@@ -264,7 +172,7 @@ describe('IntegrationBridgeClient', () => {
     const failingFetch = vi.fn().mockRejectedValue(new Error('network down'))
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [noopMiddleware],
+      middleware: noopMiddleware,
       fetchImpl: failingFetch
     })
 
@@ -276,7 +184,7 @@ describe('IntegrationBridgeClient', () => {
   test('parses payloads defensively', async () => {
     const client = new IntegrationBridgeClient({
       baseUrl,
-      middleware: [noopMiddleware]
+      middleware: noopMiddleware
     })
 
     const empty = await client.readPayload(new Response(''))
