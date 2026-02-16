@@ -2,6 +2,9 @@ import { describe, expect, test, vi } from 'vitest'
 
 describe('integration-bridge index', () => {
   test('returns a stubbed client in test env when configuration is invalid', async () => {
+    vi.doMock('./middleware/bearer-token.js', () => ({
+      bearerToken: () => async (request) => request
+    }))
     vi.doMock('./client.js', () => {
       class IntegrationBridgeConfigurationError extends Error {}
       class IntegrationBridgeClient {
@@ -14,18 +17,22 @@ describe('integration-bridge index', () => {
 
     const { integrationClient } = await import('./index.js')
 
-    expect(() => integrationClient.findCaseManagementUser()).toThrow(
-      'missing config'
-    )
+    expect(() =>
+      integrationClient.send({ resolveRequest: () => ({ path: '/unused' }) })
+    ).toThrow('missing config')
 
     vi.resetModules()
     vi.doUnmock('./client.js')
+    vi.doUnmock('./middleware/bearer-token.js')
   })
 
   test('rethrows configuration errors outside of the test environment', async () => {
     const originalEnv = process.env.NODE_ENV
     process.env.NODE_ENV = 'production'
 
+    vi.doMock('./middleware/bearer-token.js', () => ({
+      bearerToken: () => async (request) => request
+    }))
     vi.doMock('./client.js', () => {
       class IntegrationBridgeConfigurationError extends Error {}
       class IntegrationBridgeClient {
@@ -41,5 +48,6 @@ describe('integration-bridge index', () => {
     process.env.NODE_ENV = originalEnv
     vi.resetModules()
     vi.doUnmock('./client.js')
+    vi.doUnmock('./middleware/bearer-token.js')
   })
 })

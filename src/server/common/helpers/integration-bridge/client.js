@@ -1,9 +1,4 @@
-import { Buffer } from 'node:buffer'
-
-import { FindUserResponseSchema, TokenResponseSchema } from './schemas.js'
-import { createLogger } from '../logging/logger.js'
-
-class IntegrationBridgeConfigurationError extends Error {
+export class IntegrationBridgeConfigurationError extends Error {
   constructor(message) {
     super(message)
 
@@ -11,7 +6,7 @@ class IntegrationBridgeConfigurationError extends Error {
   }
 }
 
-class IntegrationBridgeRequestError extends Error {
+export class IntegrationBridgeRequestError extends Error {
   /**
    * @param {string} message
    * @param {{ status?: number, payload?: unknown, cause?: unknown }} [options]
@@ -27,99 +22,86 @@ class IntegrationBridgeRequestError extends Error {
   }
 }
 
-class IntegrationBridgeClient {
+/**
+ * @typedef {'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'} IntegrationBridgeMethod
+ *
+ * @typedef {{
+ *   method?: IntegrationBridgeMethod
+ *   path: string
+ *   body?: unknown
+ * }} IntegrationBridgeRequestConfig
+ *
+ * @typedef {{
+ *   resolveRequest: () => IntegrationBridgeRequestConfig
+ *   outputSchema?: import('joi').Schema | null
+ * }} IntegrationBridgeCommand
+ *
+ * @typedef {(request: Request) => Promise<Request> | Request} IntegrationBridgeMiddleware
+ */
+
+const identityMiddleware = (request) => request
+
+export class IntegrationBridgeClient {
   /**
    * @param {{
    *   baseUrl: string
-   *   tokenUrl: string
-   *   clientId: string
-   *   clientSecret: string
+   *   middleware?: IntegrationBridgeMiddleware
    *   fetchImpl?: typeof fetch
-   *   logger?: import('pino').BaseLogger
-   *   tokenBufferSeconds?: number
    * }} options
    */
-  constructor({
-    baseUrl,
-    tokenUrl,
-    clientId,
-    clientSecret,
-    fetchImpl = fetch,
-    logger = createLogger(),
-    tokenBufferSeconds = 30
-  }) {
-    if (!baseUrl || !tokenUrl || !clientId || !clientSecret) {
+  constructor({ baseUrl, middleware = identityMiddleware, fetchImpl = fetch }) {
+    if (!baseUrl) {
       throw new IntegrationBridgeConfigurationError(
-        'Integration Bridge requires baseUrl, tokenUrl, clientId and clientSecret to be configured'
+        'Integration Bridge requires baseUrl to be configured'
       )
     }
 
     this.baseUrl = baseUrl
 
-    this.tokenUrl = tokenUrl
-
-    this.clientId = clientId
-
-    this.clientSecret = clientSecret
-
     this.fetch = fetchImpl
 
-    this.logger = logger
-
-    this.tokenBufferSeconds = tokenBufferSeconds
-
-    /** @type {Promise<{ accessToken: string, expiresAt: Date }> | null} */
-    this.authorization = null
-
-    /** @type {Promise<{ accessToken: string, expiresAt: Date }> | null} */
-    this.refreshPromise = null
-  }
-
-  async findCaseManagementUser(emailAddress) {
-    if (!emailAddress) {
-      throw new IntegrationBridgeRequestError(
-        'emailAddress is required to look up a case management user'
-      )
-    }
-
-    return this.postJson(
-      '/case-management/users/find',
-      { emailAddress },
-      FindUserResponseSchema,
-      'case-management/users/find'
-    )
+    this.middleware = middleware
   }
 
   /**
-   * @param {string} path
-   * @param {any} body
-   * @param {import('joi').Schema | null} schema
-   * @param {string} [contextLabel]
-   * @param {string} [forwardedUserToken] - Optional user access token to forward to downstream services
+   * @param {IntegrationBridgeCommand} command
    */
-  async postJson(path, body, schema, contextLabel, forwardedUserToken) {
-    const { accessToken } = await this.getAuthorization()
+  async send(command) {
+    const contextLabel = command.constructor.name
 
+    const { method = 'POST', path, body } = command.resolveRequest()
+
+    return this.requestJson({
+      method,
+      path,
+      body,
+      schema: command.outputSchema,
+      contextLabel
+    })
+  }
+
+  async requestJson({ method, path, body, schema, contextLabel }) {
     const url = new URL(path, this.baseUrl)
 
-    const forwardedAuthorization =
-      this.formatForwardedAuthorization(forwardedUserToken)
-
-    const headers = new Headers({
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`
+    let request = new Request(url, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: body === undefined ? undefined : JSON.stringify(body)
     })
 
-    if (forwardedAuthorization) {
-      headers.append('X-Forwarded-Authorization', forwardedAuthorization)
+    try {
+      request = await this.middleware(request)
+    } catch (error) {
+      throw new IntegrationBridgeRequestError(
+        `Integration Bridge middleware failed for ${contextLabel}`,
+        { cause: error }
+      )
     }
 
-    const response = await this.safeFetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    })
+    const response = await this.safeFetch(request)
 
     const payload = await this.readPayload(response)
 
@@ -131,125 +113,15 @@ class IntegrationBridgeClient {
     }
 
     if (schema) {
-      return this.validatePayload(payload, schema, contextLabel ?? path)
+      return this.validatePayload(payload, schema, contextLabel)
     }
 
     return payload
   }
 
-  async getAuthorization() {
-    if (!this.authorization) {
-      this.authorization = this.createAuthorizationPromise().catch((error) => {
-        this.authorization = null
-
-        throw error
-      })
-
-      return this.authorization
-    }
-
-    if (this.refreshPromise) {
-      return this.refreshPromise
-    }
-
-    const authorization = await this.authorization
-
-    if (this.authorizationIsValid(authorization)) {
-      return authorization
-    }
-
-    if (!this.refreshPromise) {
-      this.refreshPromise = this.createAuthorizationPromise()
-        .then((refreshedAuthorization) => {
-          this.authorization = Promise.resolve(refreshedAuthorization)
-
-          return refreshedAuthorization
-        })
-        .catch((error) => {
-          this.authorization = null
-
-          throw error
-        })
-        .finally(() => {
-          this.refreshPromise = null
-        })
-    }
-
-    return this.refreshPromise
-  }
-
-  authorizationIsValid(authorization) {
-    return (
-      Boolean(authorization?.expiresAt) &&
-      authorization.expiresAt.getTime() > Date.now()
-    )
-  }
-
-  createAuthorizationPromise() {
-    this.logger.info(
-      'Fetching Cognito access token for the APHA Integration Bridge'
-    )
-
-    return this.requestAccessToken()
-  }
-
-  async requestAccessToken() {
-    const body = new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: this.clientId,
-      client_secret: this.clientSecret
-    })
-
-    const response = await this.safeFetch(this.tokenUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${Buffer.from(
-          `${this.clientId}:${this.clientSecret}`
-        ).toString('base64')}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body
-    })
-
-    const payload = await this.readPayload(response)
-
-    if (!response.ok) {
-      throw new IntegrationBridgeRequestError(
-        `Failed to fetch access token: ${response.status}`,
-        { status: response.status, payload }
-      )
-    }
-
-    const validatedToken = this.validatePayload(
-      payload,
-      TokenResponseSchema,
-      'token response'
-    )
-
-    const accessToken = validatedToken.access_token
-
-    const expiresAt = this.calculateExpiry(validatedToken.expires_in)
-
-    return { accessToken, expiresAt }
-  }
-
-  calculateExpiry(expiresInSeconds) {
-    const expiresIn = Number(expiresInSeconds ?? 0)
-
-    const bufferMs = this.tokenBufferSeconds * 1000
-
-    if (expiresIn <= 0) {
-      return new Date()
-    }
-
-    const expiresAtMs = Date.now() + Math.max(expiresIn * 1000 - bufferMs, 0)
-
-    return new Date(expiresAtMs)
-  }
-
-  async safeFetch(url, options) {
+  async safeFetch(request) {
     try {
-      return await this.fetch(url, options)
+      return await this.fetch(request)
     } catch (error) {
       throw new IntegrationBridgeRequestError(
         'Failed to communicate with the APHA Integration Bridge',
@@ -286,32 +158,4 @@ class IntegrationBridgeClient {
       return text
     }
   }
-
-  /**
-   * Normalises an access token so it is safe to forward downstream.
-   * Returns null when no token is provided.
-   * @param {string} [forwardedUserToken]
-   * @returns {string | null}
-   */
-  formatForwardedAuthorization(forwardedUserToken) {
-    if (typeof forwardedUserToken !== 'string') {
-      return null
-    }
-
-    const trimmedToken = forwardedUserToken.trim()
-
-    if (!trimmedToken) {
-      return null
-    }
-
-    return trimmedToken.startsWith('Bearer ')
-      ? trimmedToken
-      : `Bearer ${trimmedToken}`
-  }
-}
-
-export {
-  IntegrationBridgeClient,
-  IntegrationBridgeConfigurationError,
-  IntegrationBridgeRequestError
 }

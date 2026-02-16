@@ -6,6 +6,7 @@ import { createUserSession } from '../common/helpers/auth/user-session.js'
 import { redirectWithRefresh } from '../common/helpers/url/url-helpers.js'
 import { referrerFlashKey } from '../common/helpers/auth/federated-oidc.js'
 import { integrationClient } from '../common/helpers/integration-bridge/index.js'
+import { FindCaseManagementUserCommand } from '../common/helpers/integration-bridge/commands/find-case-management-user.js'
 
 const authCallbackController = {
   options: {
@@ -45,8 +46,9 @@ async function ensureCaseManagementUserExists(request) {
   }
 
   try {
-    const response =
-      await integrationClient.findCaseManagementUser(emailAddress)
+    const response = await integrationClient.send(
+      new FindCaseManagementUserCommand({ emailAddress })
+    )
 
     const foundUsers = Array.isArray(response?.data) && response.data.length > 0
 
