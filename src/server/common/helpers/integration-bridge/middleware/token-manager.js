@@ -7,8 +7,18 @@ import {
 } from '../client.js'
 
 /**
+ * @param {number} expiresInSeconds
+ * @param {number} tokenBufferSeconds
  * @typedef {{ accessToken: string, expiresAt: Date }} Authorization
  */
+
+const calculateExpiry = (expiresInSeconds, tokenBufferSeconds) => {
+  const expiresIn = Math.max(Number(expiresInSeconds ?? 0), 0)
+  const bufferMs = tokenBufferSeconds * 1000
+  const expiresAtMs = Date.now() + Math.max(expiresIn * 1000 - bufferMs, 0)
+
+  return new Date(expiresAtMs)
+}
 
 /**
  * @param {{
@@ -44,14 +54,6 @@ export const createTokenManager = ({
   const authorizationIsValid = (currentAuthorization) =>
     Boolean(currentAuthorization?.expiresAt) &&
     currentAuthorization.expiresAt.getTime() > Date.now()
-
-  const calculateExpiry = (expiresInSeconds) => {
-    const expiresIn = Math.max(Number(expiresInSeconds ?? 0), 0)
-    const bufferMs = tokenBufferSeconds * 1000
-    const expiresAtMs = Date.now() + Math.max(expiresIn * 1000 - bufferMs, 0)
-
-    return new Date(expiresAtMs)
-  }
 
   const requestAccessToken = async () => {
     logger.info('Fetching Cognito access token for the APHA Integration Bridge')
@@ -91,7 +93,7 @@ export const createTokenManager = ({
 
     return {
       accessToken: value.access_token,
-      expiresAt: calculateExpiry(value.expires_in)
+      expiresAt: calculateExpiry(value.expires_in, tokenBufferSeconds)
     }
   }
 
