@@ -173,7 +173,7 @@ async function postLogin(request, oidcConfig, options) {
 
   const expiresIn = token.expiresIn()
   const claims = /** @type {any} */ (token.claims?.() ?? {})
-  const { firstName, lastName } = getNamePartsFromClaims(claims)
+  const { givenName, familyName } = getNamePartsFromClaims(claims)
 
   return {
     expiresIn,
@@ -186,8 +186,8 @@ async function postLogin(request, oidcConfig, options) {
       displayName: claims.name ?? '',
       email: claims.email ?? claims.preferred_username ?? '',
       loginHint: claims.login_hint,
-      firstName,
-      lastName
+      givenName,
+      familyName
     }
   }
 }
@@ -270,18 +270,13 @@ function getRefererAsRelativeURL(referer, defaultPath) {
 }
 
 /**
- * @param {{ given_name?: string, family_name?: string, name?: string }} claims
+ * @param {{ given_name?: string, family_name?: string }} claims
  */
 function getNamePartsFromClaims(claims) {
-  const displayName = claims?.name?.trim() ?? ''
-  const [fallbackFirstName = '', ...fallbackLastNameParts] =
-    displayName.split(/\s+/)
-
-  const firstName = claims?.given_name?.trim() || fallbackFirstName
-  const lastName =
-    claims?.family_name?.trim() || fallbackLastNameParts.join(' ')
-
-  return { firstName, lastName }
+  return {
+    givenName: claims?.given_name?.trim() ?? '',
+    familyName: claims?.family_name?.trim() ?? ''
+  }
 }
 
 /**

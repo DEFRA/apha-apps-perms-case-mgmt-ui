@@ -40,11 +40,16 @@ export function context(request) {
 function buildAccountBanner(request) {
   const user = request?.auth?.credentials
 
-  if (!user?.isAuthenticated) {
+  if (!user?.isAuthenticated || !user) {
     return null
   }
 
-  const fullName = buildFullName(user)
+  const fullNameParts = [
+    user.givenName?.trim(),
+    user.familyName?.trim()
+  ].filter(Boolean)
+
+  const fullName = fullNameParts.join(' ')
 
   if (!fullName) {
     return null
@@ -54,15 +59,4 @@ function buildAccountBanner(request) {
     fullName,
     signOutPath: '/auth/logout'
   }
-}
-
-function buildFullName(user) {
-  const firstName = user?.firstName?.trim?.() ?? ''
-  const lastName = user?.lastName?.trim?.() ?? ''
-
-  if (firstName || lastName) {
-    return [firstName, lastName].filter(Boolean).join(' ')
-  }
-
-  return user?.displayName?.trim?.() ?? ''
 }

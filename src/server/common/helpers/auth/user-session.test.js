@@ -47,8 +47,8 @@ describe('user-session', () => {
             email: 'user@example.com',
             displayName: 'User One',
             loginHint: 'hint',
-            firstName: 'User',
-            lastName: 'One'
+            givenName: 'User',
+            familyName: 'One'
           }
         }
       },
@@ -66,8 +66,8 @@ describe('user-session', () => {
     )
     expect(session.email).toBe('user@example.com')
     expect(session.token).toBe('access-token')
-    expect(session.firstName).toBe('User')
-    expect(session.lastName).toBe('One')
+    expect(session.givenName).toBe('User')
+    expect(session.familyName).toBe('One')
   })
 
   test('refreshUserSession updates the cached session from the refreshed token', async () => {
@@ -108,14 +108,14 @@ describe('user-session', () => {
         id: 'user-1',
         email: 'user@example.com',
         displayName: 'User One',
-        firstName: 'User',
-        lastName: 'One',
+        givenName: 'User',
+        familyName: 'One',
         refreshToken: 'new-refresh'
       })
     )
     expect(session.id).toBe('user-1')
     expect(session.token).toBe(jwtToken)
-    expect(session.firstName).toBe('User')
-    expect(session.lastName).toBe('One')
+    expect(session.givenName).toBe('User')
+    expect(session.familyName).toBe('One')
   })
 })

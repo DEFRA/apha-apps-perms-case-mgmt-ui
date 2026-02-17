@@ -22,8 +22,8 @@ describe('#aboutController', () => {
         credentials: {
           id: 'test-user',
           email: 'user@example.com',
-          firstName: 'Test',
-          lastName: 'User',
+          givenName: 'Test',
+          familyName: 'User',
           displayName: 'Test User',
           isAuthenticated: true
         }

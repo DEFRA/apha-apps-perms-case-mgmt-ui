@@ -66,8 +66,8 @@ describe('context and cache', () => {
           path: '/',
           auth: {
             credentials: {
-              firstName: 'Alex',
-              lastName: 'Smith',
+              givenName: 'Alex',
+              familyName: 'Smith',
               displayName: 'Alex Smith',
               isAuthenticated: true
             }

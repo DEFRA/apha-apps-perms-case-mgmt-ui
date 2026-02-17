@@ -149,13 +149,13 @@ describe('federated-oidc scheme', () => {
         email: 'user@example.com',
         displayName: 'User One',
         loginHint: 'hint',
-        firstName: 'User',
-        lastName: 'One'
+        givenName: 'User',
+        familyName: 'One'
       })
     )
   })
 
-  test('post-login falls back to split display name when first/last claims are missing', async () => {
+  test('post-login leaves given/family name empty when claims are missing', async () => {
     authorizationCodeGrant.mockResolvedValueOnce({
       access_token: 'access',
       refresh_token: 'refresh',
@@ -192,8 +192,8 @@ describe('federated-oidc scheme', () => {
 
     expect(result.credentials.profile).toEqual(
       expect.objectContaining({
-        firstName: 'Alex',
-        lastName: 'Smith'
+        givenName: '',
+        familyName: ''
       })
     )
   })
