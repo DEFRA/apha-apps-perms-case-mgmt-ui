@@ -7,6 +7,16 @@ import { config } from '../../../../config/config.js'
 const tenantId = config.get('azureTenantId')
 const signingKeyId = 'mock-key'
 
+const defaultMockTokenPayload = {
+  oid: 'mock-user',
+  sub: 'mock-user',
+  preferred_username: 'aphadev.mehboob.alam@defra.gov.uk',
+  name: 'Mock User',
+  given_name: 'Mock',
+  family_name: 'User',
+  login_hint: 'mock'
+}
+
 // Static RSA key pair for mock signing (non-production only)
 const rsaPrivateKey = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCoHeDqcx3AHy+m
@@ -78,6 +88,8 @@ const mockOidcProvider = {
     register: async (server) => {
       const wellKnown = buildWellKnown()
 
+      const configuredMockPayload = config.get('azureMockTokenPayload') ?? {}
+
       server.route({
         method: 'GET',
         path: `/oidc/${tenantId}/v2.0/.well-known/openid-configuration`,
@@ -125,20 +137,20 @@ const mockOidcProvider = {
         handler: (request, h) => {
           const clientId =
             request.payload?.client_id ?? config.get('azureClientId')
+
           const payload = {
-            oid: 'mock-user',
-            sub: 'mock-user',
-            preferred_username: 'aphadev.mehboob.alam@defra.gov.uk',
-            name: 'Mock User',
-            login_hint: 'mock',
+            ...defaultMockTokenPayload,
+            ...configuredMockPayload,
             aud: clientId,
             iss: buildBaseUrl() + '/v2.0',
             exp: Math.floor(Date.now() / 1000) + 3600
           }
+
           const accessToken = jwt.token.generate(payload, {
             key: rsaPrivateKey,
             algorithm: 'RS256'
           })
+
           const idToken = jwt.token.generate(
             { ...payload, nonce: request.payload?.nonce },
             {
@@ -146,6 +158,7 @@ const mockOidcProvider = {
               algorithm: 'RS256'
             }
           )
+
           return h.response({
             token_type: 'Bearer',
             scope: request.payload?.scope ?? '',

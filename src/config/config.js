@@ -35,6 +35,30 @@ convict.addFormat({
   }
 })
 
+convict.addFormat({
+  name: 'json',
+  coerce: (value) => {
+    if (value === null || value === undefined || value === '') {
+      return null
+    }
+
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  },
+  validate: (value) => {
+    if (value === null) {
+      return
+    }
+
+    if (typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('must be null or a JSON object')
+    }
+  }
+})
+
 export const config = convict({
   serviceVersion: {
     doc: 'The service version, this variable is injected into your docker container in CDP environments',
@@ -164,6 +188,13 @@ export const config = convict({
     format: String,
     env: 'AZURE_CLIENT_ID',
     default: '26372ac9-d8f0-4da9-a17e-938eb3161d8e'
+  },
+  azureMockTokenPayload: {
+    doc: 'Optional JSON payload overrides for mocked Azure OIDC token claims',
+    format: 'json',
+    env: 'AZURE_MOCK_TOKEN_PAYLOAD',
+    nullable: true,
+    default: null
   },
   integrationBridge: {
     baseUrl: {
