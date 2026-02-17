@@ -4,6 +4,8 @@
  * @property {string} email
  * @property {string} displayName
  * @property {string} [loginHint]
+ * @property {string} [givenName]
+ * @property {string} [familyName]
  * @property {boolean} isAuthenticated
  * @property {string} token
  * @property {string} refreshToken

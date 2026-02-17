@@ -173,6 +173,8 @@ async function postLogin(request, oidcConfig, options) {
 
   const expiresIn = token.expiresIn()
   const claims = /** @type {any} */ (token.claims?.() ?? {})
+  const { givenName, familyName } = getNamePartsFromClaims(claims)
+
   return {
     expiresIn,
     token: token.access_token,
@@ -183,7 +185,9 @@ async function postLogin(request, oidcConfig, options) {
       id: claims.oid ?? '',
       displayName: claims.name ?? '',
       email: claims.email ?? claims.preferred_username ?? '',
-      loginHint: claims.login_hint
+      loginHint: claims.login_hint,
+      givenName,
+      familyName
     }
   }
 }
@@ -263,6 +267,16 @@ function getRefererAsRelativeURL(referer, defaultPath) {
   }
 
   return relative
+}
+
+/**
+ * @param {{ given_name?: string, family_name?: string }} claims
+ */
+function getNamePartsFromClaims(claims) {
+  return {
+    givenName: claims?.given_name?.trim() ?? '',
+    familyName: claims?.family_name?.trim() ?? ''
+  }
 }
 
 /**

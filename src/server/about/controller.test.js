@@ -22,6 +22,8 @@ describe('#aboutController', () => {
         credentials: {
           id: 'test-user',
           email: 'user@example.com',
+          givenName: 'Test',
+          familyName: 'User',
           displayName: 'Test User',
           isAuthenticated: true
         }
@@ -29,6 +31,8 @@ describe('#aboutController', () => {
     })
 
     expect(result).toEqual(expect.stringContaining('About'))
+    expect(result).toEqual(expect.stringContaining('Test User'))
+    expect(result).toEqual(expect.stringContaining('href="/auth/logout"'))
     expect(statusCode).toBe(statusCodes.ok)
   })
 })

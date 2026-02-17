@@ -5,3 +5,24 @@
 .app-header {
   border-bottom-color: $app-light-grey;
 }
+
+.app-service-navigation__account-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (min-width: 40.0625em) {
+  .app-service-navigation__nav .govuk-service-navigation__list {
+    width: 100%;
+  }
+
+  .app-service-navigation__account-item {
+    margin-left: auto;
+  }
+}
+
+.app-service-navigation__account-name {
+  font-weight: 700;
+  white-space: nowrap;
+}

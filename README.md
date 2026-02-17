@@ -105,11 +105,14 @@ npm install
 
 - All application routes require an authenticated Azure AD session (health and static assets remain open); start the sign-in flow at `/auth/login` and end it at `/auth/logout`.
 - Local development defaults to mocked federated credentials by leaving `AZURE_CREDENTIALS_ENABLE_MOCKING=true`, using the stub well-known endpoint and HTTP.
+- For local development with mocked credentials, you can optionally set `AZURE_MOCK_TOKEN_PAYLOAD` to a JSON object containing the Azure claims you need (for example `given_name`, `family_name`, `preferred_username`, and `login_hint`).
+- `aud`, `iss`, and `exp` are always generated dynamically by the mock token endpoint at runtime, even if provided in `AZURE_MOCK_TOKEN_PAYLOAD`.
 - Optional: override the Cognito developer provider name via `AZURE_CREDENTIAL_PROVIDER_NAME` (default: `apha-apps-perms-case-mgmt-ui-aad-access`).
 - Example `.env` (mocked, default):
   ```
   APP_BASE_URL=http://localhost:3000
   AZURE_CREDENTIALS_ENABLE_MOCKING=true
+  AZURE_MOCK_TOKEN_PAYLOAD='{"oid":"12345","sub":"mock-user","name":"Mock User","given_name":"Mock","family_name":"User","preferred_username":"<defra dev enabled email address>","login_hint":"mock"}'
   OIDC_WELL_KNOWN_CONFIGURATION_URL=http://localhost:3939/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration
   AZURE_TENANT_ID=6f504113-6b64-43f2-ade9-242e05780007
   AZURE_CLIENT_ID=26372ac9-d8f0-4da9-a17e-938eb3161d8e

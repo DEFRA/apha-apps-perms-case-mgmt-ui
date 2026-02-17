@@ -45,6 +45,7 @@ describe('context and cache', () => {
 
       test('Should provide expected context', () => {
         expect(contextResult).toEqual({
+          accountBanner: null,
           assetPath: '/public/assets',
           breadcrumbs: [],
           getAssetPath: expect.any(Function),
@@ -53,15 +54,29 @@ describe('context and cache', () => {
               current: true,
               text: 'Home',
               href: '/'
-            },
-            {
-              current: false,
-              text: 'About',
-              href: '/about'
             }
           ],
           serviceName: 'Case Management Tool',
           serviceUrl: '/'
+        })
+      })
+
+      test('Should include account banner details for authenticated users', () => {
+        const authenticatedContext = contextImport.context({
+          path: '/',
+          auth: {
+            credentials: {
+              givenName: 'Alex',
+              familyName: 'Smith',
+              displayName: 'Alex Smith',
+              isAuthenticated: true
+            }
+          }
+        })
+
+        expect(authenticatedContext.accountBanner).toEqual({
+          fullName: 'Alex Smith',
+          signOutPath: '/auth/logout'
         })
       })
 
@@ -134,6 +149,7 @@ describe('context and cache', () => {
 
       test('Should provide expected context', () => {
         expect(contextResult).toEqual({
+          accountBanner: null,
           assetPath: '/public/assets',
           breadcrumbs: [],
           getAssetPath: expect.any(Function),
@@ -142,11 +158,6 @@ describe('context and cache', () => {
               current: true,
               text: 'Home',
               href: '/'
-            },
-            {
-              current: false,
-              text: 'About',
-              href: '/about'
             }
           ],
           serviceName: 'Case Management Tool',

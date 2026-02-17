@@ -28,10 +28,35 @@ export function context(request) {
     serviceName: config.get('serviceName'),
     serviceUrl: '/',
     breadcrumbs: [],
+    accountBanner: buildAccountBanner(request),
     navigation: buildNavigation(request),
     getAssetPath(asset) {
       const webpackAssetPath = webpackManifest?.[asset]
       return `${assetPath}/${webpackAssetPath ?? asset}`
     }
+  }
+}
+
+function buildAccountBanner(request) {
+  const user = request?.auth?.credentials
+
+  if (!user?.isAuthenticated || !user) {
+    return null
+  }
+
+  const fullNameParts = [
+    user.givenName?.trim(),
+    user.familyName?.trim()
+  ].filter(Boolean)
+
+  const fullName = fullNameParts.join(' ')
+
+  if (!fullName) {
+    return null
+  }
+
+  return {
+    fullName,
+    signOutPath: '/auth/logout'
   }
 }

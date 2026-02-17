@@ -46,7 +46,9 @@ describe('user-session', () => {
             id: 'user-1',
             email: 'user@example.com',
             displayName: 'User One',
-            loginHint: 'hint'
+            loginHint: 'hint',
+            givenName: 'User',
+            familyName: 'One'
           }
         }
       },
@@ -64,6 +66,8 @@ describe('user-session', () => {
     )
     expect(session.email).toBe('user@example.com')
     expect(session.token).toBe('access-token')
+    expect(session.givenName).toBe('User')
+    expect(session.familyName).toBe('One')
   })
 
   test('refreshUserSession updates the cached session from the refreshed token', async () => {
@@ -71,7 +75,9 @@ describe('user-session', () => {
       oid: 'user-1',
       preferred_username: 'user@example.com',
       name: 'User One',
-      login_hint: 'hint'
+      login_hint: 'hint',
+      given_name: 'User',
+      family_name: 'One'
     }
     const jwtToken = jwt.token.generate(payload, {
       key: 'secret',
@@ -102,10 +108,14 @@ describe('user-session', () => {
         id: 'user-1',
         email: 'user@example.com',
         displayName: 'User One',
+        givenName: 'User',
+        familyName: 'One',
         refreshToken: 'new-refresh'
       })
     )
     expect(session.id).toBe('user-1')
     expect(session.token).toBe(jwtToken)
+    expect(session.givenName).toBe('User')
+    expect(session.familyName).toBe('One')
   })
 })
