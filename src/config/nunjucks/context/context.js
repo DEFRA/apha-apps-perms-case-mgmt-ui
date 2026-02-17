@@ -28,10 +28,41 @@ export function context(request) {
     serviceName: config.get('serviceName'),
     serviceUrl: '/',
     breadcrumbs: [],
+    accountBanner: buildAccountBanner(request),
     navigation: buildNavigation(request),
     getAssetPath(asset) {
       const webpackAssetPath = webpackManifest?.[asset]
       return `${assetPath}/${webpackAssetPath ?? asset}`
     }
   }
+}
+
+function buildAccountBanner(request) {
+  const user = request?.auth?.credentials
+
+  if (!user?.isAuthenticated) {
+    return null
+  }
+
+  const fullName = buildFullName(user)
+
+  if (!fullName) {
+    return null
+  }
+
+  return {
+    fullName,
+    signOutPath: '/auth/logout'
+  }
+}
+
+function buildFullName(user) {
+  const firstName = user?.firstName?.trim?.() ?? ''
+  const lastName = user?.lastName?.trim?.() ?? ''
+
+  if (firstName || lastName) {
+    return [firstName, lastName].filter(Boolean).join(' ')
+  }
+
+  return user?.displayName?.trim?.() ?? ''
 }

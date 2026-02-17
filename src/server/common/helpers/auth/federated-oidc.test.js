@@ -69,7 +69,9 @@ describe('federated-oidc scheme', () => {
         oid: 'user-1',
         name: 'User One',
         email: 'user@example.com',
-        login_hint: 'hint'
+        login_hint: 'hint',
+        given_name: 'User',
+        family_name: 'One'
       })
     })
     refreshTokenGrant.mockResolvedValue({ access_token: 'new-access' })
@@ -146,7 +148,52 @@ describe('federated-oidc scheme', () => {
         id: 'user-1',
         email: 'user@example.com',
         displayName: 'User One',
-        loginHint: 'hint'
+        loginHint: 'hint',
+        firstName: 'User',
+        lastName: 'One'
+      })
+    )
+  })
+
+  test('post-login falls back to split display name when first/last claims are missing', async () => {
+    authorizationCodeGrant.mockResolvedValueOnce({
+      access_token: 'access',
+      refresh_token: 'refresh',
+      id_token: 'id-token',
+      expiresIn: () => 3600,
+      claims: () => ({
+        oid: 'user-2',
+        name: 'Alex Smith',
+        email: 'alex@example.com'
+      })
+    })
+
+    const server = mockServer()
+    await federatedOidc.register(server)
+
+    const schemeFn = server.auth.scheme.mock.calls[0][1]
+    const strategyOptions = server.auth.strategy.mock.calls[0][2]
+    const { authenticate } = schemeFn(server, strategyOptions)
+
+    const request = {
+      yar: {
+        get: vi
+          .fn()
+          .mockReturnValue({ codeVerifier: 'code-verifier', nonce: 'nonce' })
+      },
+      query: { code: 'abc' },
+      url: 'http://localhost/auth/callback?code=abc'
+    }
+
+    const authenticated = vi.fn((payload) => payload)
+    const h = { authenticated }
+
+    const result = await authenticate(request, h)
+
+    expect(result.credentials.profile).toEqual(
+      expect.objectContaining({
+        firstName: 'Alex',
+        lastName: 'Smith'
       })
     )
   })

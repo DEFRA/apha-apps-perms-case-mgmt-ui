@@ -3,6 +3,7 @@
 {% from "heading/macro.njk" import appHeading %}
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
 {% set cspNonce = uuid %}
 
 {% block head %}
@@ -14,15 +15,40 @@
   <meta name="robots" content="noindex, nofollow" />
 {% endblock %}
 {% block header %}
+  {% set accountNavigationEnd %}
+    {% if accountBanner %}
+      <li
+        class="govuk-service-navigation__item app-service-navigation__account-item"
+      >
+        <span
+          class="govuk-service-navigation__text app-service-navigation__account-name"
+          data-testid="account-banner-name"
+        >{{ accountBanner.fullName }}</span>
+        <span class="govuk-!-margin-left-2">
+          <a href="{{ accountBanner.signOutPath }}" class="govuk-service-navigation__link">Sign out</a>
+        </span>
+      </li>
+    {% endif %}
+  {% endset %}
+
   {{
     govukHeader({
       rebrand: true,
       homepageUrl: "https://www.gov.uk/",
-      classes: "app-header",
+      classes: "govuk-header--full-width-border app-header",
       containerClasses: "govuk-width-container",
-      serviceName: serviceName,
-      serviceUrl: initialServiceUrl,
       useTudorCrown: true
+    })
+  }}
+  {{
+    govukServiceNavigation({
+      serviceName: serviceName,
+      serviceUrl: initialServiceUrl | default(serviceUrl, true),
+      navigationClasses: "app-service-navigation__nav",
+      navigation: navigation,
+      slots: {
+        navigationEnd: accountNavigationEnd if accountBanner else null
+      }
     })
   }}
 {% endblock %}

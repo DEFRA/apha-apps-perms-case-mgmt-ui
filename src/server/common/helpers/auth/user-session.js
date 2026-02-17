@@ -8,6 +8,8 @@ import { dropUserSession } from './drop-user-session.js'
  * @property {string} email
  * @property {string} displayName
  * @property {string} [loginHint]
+ * @property {string} [firstName]
+ * @property {string} [lastName]
  * @property {boolean} isAuthenticated
  * @property {string} token
  * @property {string} refreshToken
@@ -40,13 +42,16 @@ async function createUserSession(request, sessionId) {
   const expiresInMilliSeconds = expiresInSeconds * 1000
   const expiresAt = addSeconds(new Date(), expiresInSeconds).toISOString()
 
-  const { id, email, displayName, loginHint } = request.auth.credentials.profile
+  const { id, email, displayName, loginHint, firstName, lastName } =
+    request.auth.credentials.profile
 
   const session = {
     id,
     email,
     displayName,
     loginHint,
+    firstName,
+    lastName,
     isAuthenticated: request.auth.isAuthenticated,
     token: request.auth.credentials.token,
     refreshToken: request.auth.credentials.refreshToken,
@@ -76,6 +81,8 @@ async function createUserSession(request, sessionId) {
  * @property {string} preferred_username
  * @property {string} name
  * @property {string} login_hint
+ * @property {string} [given_name]
+ * @property {string} [family_name]
  */
 
 /**
@@ -101,11 +108,22 @@ async function refreshUserSession(request, refreshTokenResponse) {
     `User session refreshed, UserId: ${payload.oid}, displayName: ${payload.name}`
   )
 
+  const [fallbackFirstName = '', ...fallbackLastNameParts] = (
+    payload.name ?? ''
+  )
+    .trim()
+    .split(/\s+/)
+
+  const firstName = payload.given_name ?? fallbackFirstName
+  const lastName = payload.family_name ?? fallbackLastNameParts.join(' ')
+
   const session = {
     id: payload.oid,
     email: payload.preferred_username,
     displayName: payload.name,
     loginHint: payload.login_hint,
+    firstName,
+    lastName,
     isAuthenticated: true,
     token: refreshTokenResponse.access_token,
     refreshToken: refreshTokenResponse.refresh_token,
