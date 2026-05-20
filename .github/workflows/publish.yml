@@ -26,7 +26,7 @@ jobs:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Configure MGMT UI .env file
         shell: bash
@@ -44,7 +44,7 @@ jobs:
             APHA_INTEGRATION_BRIDGE_CLIENT_SECRET=${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_SECRET }}
 
       - name: Create Test Coverage Reports
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
 
@@ -57,7 +57,7 @@ jobs:
           npm run test
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@master
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -88,6 +88,6 @@ jobs:
         run: docker compose down
 
       - name: Build and Publish
-        uses: DEFRA/cdp-build-action/build@main
+        uses: DEFRA/cdp-build-action/build@550c4792fac07cfd59eaea469bc0a17ce202cced # main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
