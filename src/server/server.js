@@ -20,6 +20,7 @@ import { sessionCookie } from './common/helpers/auth/session-cookie.js'
 import { setupCaches } from './common/helpers/session-cache/setup-caches.js'
 import { mockCognitoFederatedCredentials } from './common/helpers/auth/mock-cognito.js'
 import { mockOidcProvider } from './common/helpers/auth/mock-oidc-provider.js'
+import { createLogger } from './common/helpers/logging/logger.js'
 
 export async function createServer() {
   setupProxy()
@@ -88,6 +89,19 @@ export async function createServer() {
   await server.register(plugins)
 
   server.ext('onPreResponse', catchAll)
+
+  const logger = createLogger()
+
+  for (const envVar of [
+    'APP_BASE_URL',
+    'AZURE_CLIENT_ID',
+    'AZURE_CREDENTIAL_PROVIDER_NAME',
+    'AZURE_IDENTITY_POOL_ID',
+    'AZURE_TENANT_ID',
+    'OIDC_WELL_KNOWN_CONFIGURATION_URL'
+  ]) {
+    logger.info(`${envVar}: ${process.env[envVar]}`)
+  }
 
   return server
 }
