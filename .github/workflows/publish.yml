@@ -26,7 +26,7 @@ jobs:
       APHA_INTEGRATION_BRIDGE_REPO: ${{ github.workspace }}/apha-integration-bridge
     steps:
       - name: Check out code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Configure MGMT UI .env file
         shell: bash
@@ -44,7 +44,7 @@ jobs:
             APHA_INTEGRATION_BRIDGE_CLIENT_SECRET=${{ secrets.APHA_INTEGRATION_BRIDGE_CLIENT_SECRET }}
 
       - name: Create Test Coverage Reports
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: .nvmrc
 
@@ -88,6 +88,6 @@ jobs:
         run: docker compose down
 
       - name: Build and Publish
-        uses: DEFRA/cdp-build-action/build@550c4792fac07cfd59eaea469bc0a17ce202cced # main
+        uses: DEFRA/cdp-build-action/build@7fe324bec9987c5a4d0f4724b42e30c282892ceb # main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
